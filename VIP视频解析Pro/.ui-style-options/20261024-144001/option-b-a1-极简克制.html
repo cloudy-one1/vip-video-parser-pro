@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>选项 B · A1 极简克制 — VIP 视频解析</title>
+<style>
+  /* ===== A1 极简克制：黑白灰 + 单强调色 + 1px 边框 + 零阴影 ===== */
+  :root {
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --text: #18181b;
+    --muted: #71717a;
+    --accent: #2563eb;
+    --accent-soft: #eff4ff;
+    --danger: #dc2626;
+    --star: #ca8a04;
+    --radius: 6px;
+    --dur: 0.15s;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14.5px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  .op-label {
+    position: fixed; top: 12px; left: 12px; z-index: 10;
+    padding: 4px 12px; border-radius: var(--radius);
+    background: var(--text); color: #fff; font-size: 12px; letter-spacing: 0.05em;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px 40px; }
+
+  header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 34px 0 20px; border-bottom: 1px solid var(--text);
+  }
+  .logo { display: flex; align-items: baseline; gap: 14px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .logo p { margin: 0; font-size: 12.5px; color: var(--muted); }
+  .hint { font-size: 12.5px; color: var(--muted); }
+
+  section { padding: 18px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: 0; }
+
+  /* 输入区 */
+  .search { display: flex; gap: 8px; flex-wrap: wrap; }
+  .input-wrap { position: relative; flex: 1; min-width: 240px; }
+  input {
+    width: 100%; height: 42px; padding: 0 92px 0 12px;
+    border-radius: var(--radius); border: 1px solid var(--border-strong);
+    background: var(--surface); color: var(--text);
+    font-size: 14px; outline: none; font-family: inherit;
+    transition: border-color var(--dur) linear, box-shadow var(--dur) linear;
+  }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .badge {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    padding: 2px 8px; border-radius: var(--radius); background: var(--c, #888); color: #fff; font-size: 11.5px;
+  }
+  .btn {
+    height: 42px; padding: 0 18px; border-radius: var(--radius); cursor: pointer;
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
+    font-size: 14px; font-family: inherit;
+    transition: background var(--dur) linear, border-color var(--dur) linear, color var(--dur) linear;
+  }
+  .btn:hover { border-color: var(--text); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+  .btn.primary:hover { background: #1d4fd7; }
+  .btn.small { height: 30px; padding: 0 10px; font-size: 12.5px; }
+
+  /* 线路 */
+  .lines { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .lbl { font-size: 13px; color: var(--muted); margin-right: 4px; }
+  .chip {
+    padding: 5px 12px; border-radius: var(--radius); cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    font-size: 13px; font-family: inherit;
+    transition: border-color var(--dur) linear, background var(--dur) linear, color var(--dur) linear;
+  }
+  .chip:hover { border-color: var(--text); }
+  .chip.active { background: var(--text); border-color: var(--text); color: #fff; font-weight: 500; }
+  .manage { margin-left: auto; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 13px; font-family: inherit; }
+  .manage:hover { color: var(--text); }
+
+  /* 播放器：加载反馈是最小进度条（必要状态反馈） */
+  .player { padding: 18px 0; }
+  .ptoolbar { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-bottom: 10px; }
+  .now { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .acts { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+  .acts b { color: var(--text); font-weight: 500; cursor: pointer; }
+  .acts b:hover { color: var(--accent); }
+  .frame {
+    position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius);
+    overflow: hidden; background: #09090b; border: 1px solid var(--border-strong);
+  }
+  .loading {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px; color: #a1a1aa; font-size: 13.5px;
+  }
+  .bar { width: 180px; height: 2px; background: #27272a; overflow: hidden; border-radius: 1px; }
+  .bar i {
+    display: block; width: 40%; height: 100%; background: #d4d4d8;
+    animation: slide 1.2s linear infinite;
+  }
+  @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(450%); } }
+  .ptip { margin: 10px 0 0; font-size: 12.5px; color: var(--muted); }
+
+  /* 历史 */
+  .hhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .hhead h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .htools { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
+  .htools button { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 13px; font-family: inherit; }
+  .htools button:hover { color: var(--text); }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li {
+    display: flex; align-items: center; gap: 10px; padding: 9px 4px;
+    border-bottom: 1px solid var(--border);
+    transition: background var(--dur) linear;
+  }
+  li:last-child { border-bottom: 0; }
+  li:hover { background: var(--accent-soft); }
+  .dot { width: 7px; height: 7px; border-radius: 1px; background: var(--c, #888); flex: 0 0 7px; }
+  .plat { flex: 0 0 auto; font-size: 12.5px; font-weight: 600; color: var(--accent); }
+  .url { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .time { flex: 0 0 auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ops { flex: 0 0 auto; font-size: 13px; color: var(--muted); }
+  .ops em { font-style: normal; margin-left: 8px; cursor: pointer; }
+  .ops em:hover { color: var(--text); }
+  .ops .fav { color: var(--star); }
+
+  footer { text-align: center; padding: 26px 0 10px; font-size: 12.5px; color: var(--muted); }
+  footer p { margin: 4px 0; }
+  kbd {
+    padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border-strong);
+    background: var(--surface); font-size: 12px;
+  }
+
+  @media (max-width: 720px) {
+    .search .btn { flex: 1; }
+    .input-wrap { flex-basis: 100%; }
+    .time { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bar i { animation: none; width: 100%; opacity: 0.5; }
+    * { transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="op-label">选项 B · A1 极简克制</div>
+
+<main class="wrap">
+  <header>
+    <div class="logo">
+      <h1>VIP 视频解析</h1>
+      <p>粘贴链接 · 选择线路 · 立即观看</p>
+    </div>
+    <span class="hint">跟随系统 · 浅色优先</span>
+  </header>
+
+  <section class="search">
+    <div class="input-wrap">
+      <input type="text" readonly value="https://v.qq.com/x/cover/mzc00200mp8vo9b/u0044qcdckl.html">
+      <span class="badge" style="--c:#ff6b35">腾讯视频</span>
+    </div>
+    <button class="btn primary" type="button">▶ 解析播放</button>
+    <button class="btn" type="button">粘贴</button>
+    <button class="btn" type="button">清空</button>
+  </section>
+
+  <section class="lines">
+    <span class="lbl">线路</span>
+    <button class="chip active" type="button">极致解析</button>
+    <button class="chip" type="button">PlayM3U8</button>
+    <button class="chip" type="button">IM1907</button>
+    <button class="chip" type="button">爱豆解析</button>
+    <button class="chip" type="button">OK解析</button>
+    <button class="chip" type="button">夜幕解析</button>
+    <button class="chip" type="button">JsonPlayer</button>
+    <button class="chip" type="button">8090解析</button>
+    <button class="manage" type="button">⚙ 管理线路</button>
+  </section>
+
+  <section class="player">
+    <div class="ptoolbar">
+      <span class="now">腾讯视频 · https://v.qq.com/x/cover/mzc00200mp8vo9b/u0044qcdckl.html</span>
+      <span class="acts"><b>↻ 刷新</b> · <b>↗ 新窗口</b> · <b>✕ 关闭</b></span>
+    </div>
+    <div class="frame">
+      <div class="loading"><div class="bar"><i></i></div><p>正在加载线路…</p></div>
+    </div>
+    <p class="ptip">提示：画面长时间空白多为线路失效或禁止内嵌，请切换其他线路或用「新窗口打开」。</p>
+  </section>
+
+  <section>
+    <div class="hhead">
+      <h2>观看记录</h2>
+      <div class="htools"><label><input type="checkbox"> 只看收藏</label><button type="button">清空记录</button></div>
+    </div>
+    <ul>
+      <li>
+        <i class="dot" style="--c:#ff6b35"></i><span class="plat">腾讯视频</span>
+        <span class="url">https://v.qq.com/x/cover/mzc00200mp8vo9b/u0044qcdckl.html</span>
+        <span class="time">刚刚</span>
+        <span class="ops"><em class="fav">★</em><em>✕</em></span>
+      </li>
+      <li>
+        <i class="dot" style="--c:#00be06"></i><span class="plat">爱奇艺</span>
+        <span class="url">https://www.iqiyi.com/v_19rrok4nt0.html</span>
+        <span class="time">2 小时前</span>
+        <span class="ops"><em>☆</em><em>✕</em></span>
+      </li>
+      <li>
+        <i class="dot" style="--c:#fb7299"></i><span class="plat">哔哩哔哩</span>
+        <span class="url">https://www.bilibili.com/video/BV1GJ411x7h7/</span>
+        <span class="time">昨天</span>
+        <span class="ops"><em>☆</em><em>✕</em></span>
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>快捷键：<kbd>Enter</kbd> 解析 · <kbd>Esc</kbd> 清空 · <kbd>Alt</kbd>+<kbd>1~9</kbd> 切换线路</p>
+    <p>本页面仅作前端技术学习用途；解析由第三方公开接口完成。请支持正版。</p>
+  </footer>
+</main>
+</body>
+</html>

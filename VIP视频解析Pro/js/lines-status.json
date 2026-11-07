@@ -1,0 +1,86 @@
+{
+  "checkedAt": "2026-11-01T19:57:37",
+  "tool": "line_checker/1.0",
+  "lines": {
+    "8090g": {
+      "homepage": "https://www.8090g.cn/",
+      "status": "up",
+      "code": 200,
+      "ms": 1526,
+      "title": "",
+      "finalUrl": "https://www.8090g.cn/",
+      "note": "",
+      "via": "http"
+    },
+    "yemu": {
+      "homepage": "https://www.yemu.xyz/",
+      "status": "up",
+      "code": 200,
+      "ms": 1648,
+      "title": "十八码 - 苹果CMS模板插件与WEB播放器整合使用经验交流社区",
+      "finalUrl": "https://www.yemu.xyz/",
+      "note": "",
+      "via": "http"
+    },
+    "im1907": {
+      "homepage": "https://im1907.top/",
+      "status": "up",
+      "code": 200,
+      "ms": 1757,
+      "title": "M1907 云加速播放器 - 演示版",
+      "finalUrl": "https://im1907.top/",
+      "note": "",
+      "via": "http"
+    },
+    "aidouer": {
+      "homepage": "https://jx.aidouer.net/",
+      "status": "up",
+      "code": 200,
+      "ms": 1986,
+      "title": "江湖路远，后会无期",
+      "finalUrl": "https://jx.aidouer.net/",
+      "note": "",
+      "via": "http"
+    },
+    "okjx": {
+      "homepage": "https://okjx.cc/",
+      "status": "up",
+      "code": 200,
+      "ms": 4681,
+      "title": "Redirecting...",
+      "finalUrl": "https://okjx.cc/",
+      "note": "HTTP 层异常(CertificateVerifyError),浏览器复核通过",
+      "via": "browser"
+    },
+    "playm3u8": {
+      "homepage": "https://www.playm3u8.cn/",
+      "status": "down",
+      "code": 403,
+      "ms": 1532,
+      "title": "403 Forbidden",
+      "finalUrl": "https://www.playm3u8.cn/",
+      "note": "服务器明确拒绝访问(nginx 403)",
+      "via": "browser"
+    },
+    "bljex": {
+      "homepage": "https://svip.bljex.cc/",
+      "status": "down",
+      "code": null,
+      "ms": 3840,
+      "title": "",
+      "finalUrl": "https://svip.bljex.cc/",
+      "note": "连接失败(超时/DNS/拒连)",
+      "via": "http"
+    },
+    "jsonplayer": {
+      "homepage": "https://jx.jsonplayer.com/",
+      "status": "down",
+      "code": null,
+      "ms": 13692,
+      "title": "",
+      "finalUrl": "https://jx.jsonplayer.com/",
+      "note": "连接失败(超时/DNS/拒连)",
+      "via": "http"
+    }
+  }
+}
