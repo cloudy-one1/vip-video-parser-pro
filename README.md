@@ -2,7 +2,16 @@
 
 基于《VIP视频解析 v1.0.2》思路重构升级的纯前端项目：粘贴各大视频平台的播放页链接，选择一条解析线路，即可通过第三方公开解析接口在页面内观看。
 
-原版只有一个 4.5 KB 的混淆单文件；本项目把逻辑拆分、去混淆、模块化，并补齐了原版缺失/损坏的功能（如回车解析）。
+原版只有一个 4.5 KB 的混淆单文件；重构版把逻辑拆分、去混淆、模块化，并补齐了原版缺失/损坏的功能（如回车解析）。
+
+## 仓库结构
+
+```
+.
+├── VIP视频解析Pro/          重构版主项目（日常使用这个）
+├── VIP视频解析v1.0.2.html   原版单文件，留作对照
+└── README.md
+```
 
 ## 功能特性
 
@@ -42,6 +51,7 @@ npx serve .
 解析站时效性极差——本项目默认 8 条线路实测只有 5 条可用。工具链 `tools/line_checker.py` 用 [Scrapling](https://github.com/D4Vinci/Scrapling) 批量探测各线路首页，把结果写成前端可直接消费的状态快照：
 
 ```bash
+# 在 VIP视频解析Pro/ 目录下执行
 # 依赖：Python 3.10+，且已 pip install "scrapling[all]>=0.5"
 python tools/line_checker.py              # 体检 js/config.js 里的默认线路
 python tools/line_checker.py --timeout 12 # 调整单站超时
@@ -69,7 +79,7 @@ python tools/line_checker.py --timeout 12 # 调整单站超时
   https://example.com/vip/?id={url}&type=auto
   ```
 
-## 目录结构
+## 项目内部目录结构
 
 ```
 VIP视频解析Pro/
@@ -80,7 +90,7 @@ VIP视频解析Pro/
 ├── js/lines-status.js   线路状态快照（tools/line_checker.py 生成，可随时重跑）
 ├── js/lines-status.json 同上，http 部署时 fetch 读取
 ├── tools/line_checker.py  Scrapling 线路体检工具链
-└── README.md
+└── .ui-style-options/   ui-style-system 风格方案存档（可忽略）
 ```
 
 ## 免责声明
