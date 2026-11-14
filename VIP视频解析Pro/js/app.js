@@ -1074,14 +1074,38 @@
     } catch (e) { /* 忽略 */ }
     return false;
   })();
-  // 未装净化脚本且没关过提醒时，给出 AdGuard 安装引导（一键跳官方页）
+  // 未装净化脚本且没关过提醒时，给出 AdGuard 安装引导
+  // 链接按设备直达，避免误入桌面 App 下载页（那是付费软件，本站场景只需要免费扩展）：
+  //   Edge → Edge 商店 ｜ Chrome → Chrome 商店 ｜ iPhone/iPad → App Store 的免费 Safari 拦截版 ｜ 其他 → 官方引导页
+  const adguardInstallUrl = () => {
+    const ua = navigator.userAgent;
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'https://apps.apple.com/app/id1047223162';
+    if (/Edg\//.test(ua)) return 'https://microsoftedge.microsoft.com/addons/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl';
+    if (/Chrome\//.test(ua) && !/Edg\//.test(ua)) return 'https://chromewebstore.google.com/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl';
+    return 'https://adguard.com/zh_cn/adguard-browser-extension/extension.html';
+  };
+  const isIosDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const hintUrl = adguardInstallUrl();
   try {
     const KEYS_HAS = 'vvpro.adguardHintDismissed';
-    if (!shieldActive && !LS.get(KEYS_HAS, false)) $('#adguardHint').hidden = false;
+    if (!shieldActive && !LS.get(KEYS_HAS, false)) {
+      const hint = $('#adguardHint');
+      hint.hidden = false;
+      const a = hint.querySelector('a');
+      a.href = hintUrl;
+      a.textContent = isIosDevice ? '增强防护：装 AdGuard App ↗' : '增强防护：推荐装 AdGuard 扩展 ↗';
+    }
     $('#adguardHintClose').addEventListener('click', () => {
       $('#adguardHint').hidden = true;
       LS.set(KEYS_HAS, true);
     });
+  } catch (e) { /* 忽略 */ }
+  try {
+    const tipA = document.querySelector('.player-tip .tip-link');
+    if (tipA) {
+      tipA.href = hintUrl;
+      if (isIosDevice) tipA.textContent = 'AdGuard App';
+    }
   } catch (e) { /* 忽略 */ }
   renderLines();
   renderHistory();

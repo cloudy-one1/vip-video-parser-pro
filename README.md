@@ -25,7 +25,7 @@
 
 解析页内部的广告需要浏览器级工具净化,按省事程度推荐:
 
-1. **[AdGuard 官方扩展](https://adguard.com/zh_cn/adguard-browser-extension/extension.html)**——首选,与本项目完全兼容、可叠加;
+1. **[AdGuard 官方浏览器扩展](https://microsoftedge.microsoft.com/addons/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl)**——首选,免费,一步到位;**注意别下成 AdGuard 桌面/手机 App(付费系统级软件,本站场景不需要)**。商店直达:[Edge](https://microsoftedge.microsoft.com/addons/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl) / [Chrome](https://chromewebstore.google.com/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl) / iPhone 装 [App Store 免费版 Safari 拦截](https://apps.apple.com/app/id1047223162);站内提醒会按设备自动跳对地方;
 2. **[净化用户脚本](userscript/parse-ad-shield.user.js)**——针对本仓库线路定制的微型过滤引擎,装 [Tampermonkey](https://www.tampermonkey.net/) 后[一键安装](https://raw.githubusercontent.com/cloudy-one1/vip-video-parser-pro/main/userscript/parse-ad-shield.user.js);
 3. **[MV3 扩展壳](extension/README.md)**——同一套规则的 `declarativeNetRequest` 网络层拦截版,本地加载。
 
