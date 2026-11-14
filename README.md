@@ -13,7 +13,7 @@
 ```
 .
 ├── VIP视频解析Pro/          重构版主项目（日常使用这个）
-├── .github/workflows/       线路自动体检（GitHub Actions cron）
+├── .github/workflows/       线路自动体检 + Pages 部署（GitHub Actions）
 └── README.md
 ```
 
@@ -52,6 +52,13 @@ npx serve .
 然后访问 http://localhost:8080
 
 > 提示：直接以 `file://` 打开时，「粘贴」按钮的剪贴板读取在部分浏览器会受限，属正常现象，手动 Ctrl+V 即可。
+
+## 在线访问（GitHub Pages）
+
+**https://cloudy-one1.github.io/vip-video-parser-pro/**
+
+- `.github/workflows/pages-deploy.yml` 把 `VIP视频解析Pro/` 作为站点根发布，每次 push 到 main 自动更新（每日自动体检的快照提交也会顺带刷新线上线路状态）；
+- 部署在海外节点，公共搜索代理的可达性通常比本地裸连更好；粘贴按钮、云端搜索在 http(s) 环境下无任何限制。
 
 ## 线路体检（REA + Scrapling 工具链）
 

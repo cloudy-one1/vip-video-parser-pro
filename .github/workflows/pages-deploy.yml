@@ -1,0 +1,34 @@
+name: Deploy Pages
+
+# 把 VIP视频解析Pro/ 作为站点根发布到 GitHub Pages,
+# 每次 push 到 main 自动更新(自动体检的快照提交也会顺带刷新线上状态)。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'VIP视频解析Pro'
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
