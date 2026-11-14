@@ -2,8 +2,11 @@
  * prefix 里可用 {url} 占位符表示视频链接的位置；
  * 不写占位符时，视频链接会编码后拼在接口地址末尾。
  * 清单来源：老默认线路 + 88lin/video_vip 维护的接口清单，
- * 经 tools/line_checker.py 深度体检筛选（2026-11-14，11/15 通过），
+ * 经 tools/line_checker.py 深度体检筛选（2026-11-14，10/11 通过），
  * 按响应速度排序。解析站时效性差，失效后可在页面里编辑或删除。
+ *
+ * 除名记录：
+ *  - bd.jx.cn（BD解析）：2026-11-14 播放页实测出现成人广告插页，内容政策除名。
  */
 window.DEFAULT_LINES = [
   { id: 'lxyy',       name: 'LXYY解析',  prefix: 'https://jx.lxyy.club/index.php?url=' },
@@ -13,11 +16,15 @@ window.DEFAULT_LINES = [
   { id: 'yemu',       name: '夜幕解析',   prefix: 'https://www.yemu.xyz/?url=' },
   { id: '8090g',      name: '8090解析',  prefix: 'https://www.8090g.cn/?url=' },
   { id: 'aidouer',    name: '爱豆解析',   prefix: 'https://jx.aidouer.net/?url=' },
-  { id: 'bdjx',       name: 'BD解析',    prefix: 'https://bd.jx.cn/?url=' },
   { id: 'txnp',       name: 'TXNQ解析',  prefix: 'https://bfq.txnp.cn/player?url=' },
   { id: 'jx789',      name: '789解析',   prefix: 'https://jiexi.789jiexi.com/?url=' },
   { id: 'okjx',       name: 'OK解析',    prefix: 'https://okjx.cc/?url=' }
 ];
+
+/* 内容政策除名的默认线路：app.js 会在加载时自动清掉「未被用户改动过」的这些线 */
+window.REMOVED_DEFAULT_LINES = {
+  bdjx: 'https://bd.jx.cn/?url='
+};
 
 /* ========= 无损云搜索配置 =========
  * 片名搜索 → 候选 → 选集 → m3u8 直连，参考 88lin/video_vip 的「无损云解析」。

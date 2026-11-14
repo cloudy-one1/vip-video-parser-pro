@@ -47,6 +47,15 @@
   /* ---------- 状态 ---------- */
   let lines = LS.get(KEYS.lines, null);
   if (!Array.isArray(lines) || !lines.length) lines = window.DEFAULT_LINES.map(l => Object.assign({}, l));
+  // 内容政策迁移：自动清掉「未被用户改动过」的除名默认线路（bdjx 播放页出现成人广告插页）
+  if (window.REMOVED_DEFAULT_LINES) {
+    const kept = lines.filter(l => window.REMOVED_DEFAULT_LINES[l.id] !== l.prefix);
+    if (kept.length && kept.length !== lines.length) {
+      lines = kept;
+      LS.set(KEYS.lines, lines);
+    }
+  }
+  if (!lines.length) lines = window.DEFAULT_LINES.map(l => Object.assign({}, l));
   let activeLineId = LS.get(KEYS.active, null);
   if (!lines.some(l => l.id === activeLineId)) activeLineId = lines[0].id;
 
