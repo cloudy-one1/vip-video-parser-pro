@@ -12,6 +12,8 @@
   python tools/line_checker.py --no-browser       # 只走 HTTP 层,禁用无头浏览器复核(CI 用)
   python tools/line_checker.py --badge out.json   # 额外输出 shields.io 徽标 JSON
   python tools/line_checker.py --summary-md out.md  # 额外输出 Markdown 摘要表
+  python tools/line_checker.py --history h.json   # 追加体检记录到历史(趋势数据源)
+  python tools/line_checker.py --trend-svg t.svg  # 从历史生成可用率趋势曲线 SVG
 
 输出(写入 js/ 目录):
   js/lines-status.js     前端启动时以 <script> 方式读取(file:// 与 http:// 均适用)
@@ -40,7 +42,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CONFIG_JS = ROOT / "js" / "config.js"
 OUT_DIR = ROOT / "js"
 
-TOOL_VERSION = "1.1"
+TOOL_VERSION = "1.2"
 
 # 疑似 Cloudflare 质询/拦截页的特征(小写匹配)
 CF_MARKERS = [
@@ -224,7 +226,7 @@ def write_badge(path: Path, alive: int, total: int) -> None:
     path.write_text(json.dumps(badge, ensure_ascii=False), encoding="utf-8")
 
 
-def write_summary_md(path: Path, lines, results, alive: int, total: int) -> None:
+def write_summary_md(path: Path, lines, results, alive: int, total: int, history=None) -> None:
     """写 Markdown 摘要表(按 config.js 线路顺序),供 GitHub Actions 运行摘要展示。"""
     now = datetime.now().astimezone().isoformat(timespec="seconds")
     rows = []
@@ -236,16 +238,84 @@ def write_summary_md(path: Path, lines, results, alive: int, total: int) -> None
         note = rec.get("note") or ""
         rows.append(f"| {ln['name']} | {mark} | {ms if ms is not None else '-'} | {note} |")
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
+    lines_out = [
         "# 线路体检摘要\n\n"
         f"- 体检时间:{now}\n"
         f"- 结果:**{alive}/{total} 可用**\n"
         "- 口径:HTTP 层探测(`--no-browser`);GitHub Actions runner 位于海外,"
-        "个别国内站点可能因跨境网络差异被判异常,以本地深度体检为准\n\n"
-        "| 线路 | 状态 | 延迟(ms) | 说明 |\n"
+        "个别国内站点可能因跨境网络差异被判异常,以本地深度体检为准\n"
+    ]
+    if history:
+        recent = history[-7:]
+        trend = " → ".join(f"{e.get('alive', 0)}/{e.get('total', 0)}" for e in recent)
+        lines_out.append(f"- 趋势(最近 {len(recent)} 次):{trend}\n")
+    lines_out += [
+        "\n| 线路 | 状态 | 延迟(ms) | 说明 |\n"
         "|---|---|---|---|\n" + "\n".join(rows) + "\n",
-        encoding="utf-8",
-    )
+    ]
+    path.write_text("".join(lines_out), encoding="utf-8")
+
+
+def append_history(path: Path, checked_at: str, alive: int, total: int, keep: int = 180):
+    """追加一条体检记录并裁剪,返回最新历史(文件不存在或损坏则新建)。"""
+    history = []
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                history = [e for e in data if isinstance(e, dict)]
+        except Exception:
+            history = []
+    history.append({"checkedAt": checked_at, "alive": alive, "total": total})
+    history = history[-keep:]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+    return history
+
+
+ACCENT = "#2dd4bf"  # 与前端 G4「微光磨砂」一致的青蓝强调色
+
+
+def write_trend_svg(path: Path, history) -> bool:
+    """从历史生成可用率迷你趋势曲线 SVG;无数据时返回 False 不写出。"""
+    pts = [e for e in history if e.get("total")]
+    if not pts:
+        return False
+    ratios = [e["alive"] / e["total"] for e in pts]
+    W, H, PAD = 480, 64, 8
+    iw, ih = W - PAD * 2, H - PAD * 2
+    n = len(pts)
+    if n == 1:  # 单条数据:只在末端画一个点
+        coords = [(W - PAD, PAD + (1 - ratios[0]) * ih)]
+    else:
+        coords = [(PAD + i * iw / (n - 1), PAD + (1 - r) * ih) for i, r in enumerate(ratios)]
+
+    last = pts[-1]
+    label = f"{last.get('alive', 0)}/{last['total']}"
+    lx, ly = coords[-1]
+    parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">',
+        # 50% 基准线
+        f'<line x1="{PAD}" y1="{PAD + ih / 2:.0f}" x2="{W - PAD}" y2="{PAD + ih / 2:.0f}" '
+        'stroke="#d1d5db" stroke-width="1" stroke-dasharray="3,3"/>',
+    ]
+    if n >= 2:
+        poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in coords)
+        area = f"{PAD:.1f},{PAD + ih} " + poly + f" {W - PAD:.1f},{PAD + ih}"
+        parts += [
+            f'<polygon points="{area}" fill="{ACCENT}" opacity="0.15"/>',
+            f'<polyline points="{poly}" fill="none" stroke="{ACCENT}" stroke-width="2" '
+            'stroke-linejoin="round" stroke-linecap="round"/>',
+        ]
+    parts += [
+        f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="3.5" fill="{ACCENT}"/>',
+        f'<text x="{W - PAD}" y="{H - 1}" text-anchor="end" font-family="system-ui,sans-serif" '
+        f'font-size="11" fill="#6b7280">{label}</text>',
+        "</svg>",
+    ]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(parts), encoding="utf-8")
+    return True
 
 
 def main():
@@ -258,6 +328,8 @@ def main():
     ap.add_argument("--out-dir", default=str(OUT_DIR), help="快照输出目录")
     ap.add_argument("--badge", help="额外写一个 shields.io 徽标 JSON 到指定路径")
     ap.add_argument("--summary-md", help="额外写一份 Markdown 摘要表到指定路径")
+    ap.add_argument("--history", help="体检历史 JSON 文件(追加本次记录,CI 累积趋势用)")
+    ap.add_argument("--trend-svg", help="从历史生成可用率趋势曲线 SVG 到指定路径")
     args = ap.parse_args()
 
     if args.lines:
@@ -299,12 +371,32 @@ def main():
     alive = sum(1 for r in results.values() if r["status"] == "up")
     print(f"\n完成:{alive}/{len(lines)} 可用。快照已写入 {out / 'lines-status.json'} 与 lines-status.js")
 
+    history = None
+    if args.history:
+        history = append_history(
+            Path(args.history), snapshot["checkedAt"], alive, len(lines)
+        )
+        print(f"历史已追加 {args.history}(共 {len(history)} 条)")
     if args.badge:
         write_badge(Path(args.badge), alive, len(lines))
         print(f"徽标已写入 {args.badge}")
     if args.summary_md:
-        write_summary_md(Path(args.summary_md), lines, results, alive, len(lines))
+        write_summary_md(Path(args.summary_md), lines, results, alive, len(lines), history)
         print(f"摘要已写入 {args.summary_md}")
+    if args.trend_svg:
+        svg_path = Path(args.trend_svg)
+        data = history
+        if data is None:
+            src = Path(args.history) if args.history else svg_path.with_name("history.json")
+            try:
+                loaded = json.loads(src.read_text(encoding="utf-8")) if src.exists() else []
+                data = loaded if isinstance(loaded, list) else []
+            except Exception:
+                data = []
+        if write_trend_svg(svg_path, data):
+            print(f"趋势曲线已写入 {args.trend_svg}")
+        else:
+            print("历史数据不足,跳过趋势曲线")
 
 
 if __name__ == "__main__":

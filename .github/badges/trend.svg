@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="64" viewBox="0 0 480 64">
+<line x1="8" y1="32" x2="472" y2="32" stroke="#d1d5db" stroke-width="1" stroke-dasharray="3,3"/>
+<circle cx="472.0" cy="32.0" r="3.5" fill="#2dd4bf"/>
+<text x="472" y="63" text-anchor="end" font-family="system-ui,sans-serif" font-size="11" fill="#6b7280">4/8</text>
+</svg>

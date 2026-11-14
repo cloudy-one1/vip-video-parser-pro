@@ -78,12 +78,21 @@ python tools/line_checker.py --no-browser # 只走 HTTP 层快速体检（CI 同
 
 ## 自动体检（GitHub Actions）
 
-仓库内置 `.github/workflows/line-check.yml`：**每天北京时间 09:00** 自动跑一次 HTTP-only 体检（`--no-browser`），把线路状态快照和徽标数据提交回仓库，本地 `git pull` 后页面线路状态即为最新。也可以到 [Actions](https://github.com/cloudy-one1/vip-video-parser-pro/actions) 页面手动触发（Run workflow），每次运行的结果摘要在运行详情页可见。
+仓库内置 `.github/workflows/line-check.yml`：**每天北京时间 09:00** 自动跑一次 HTTP-only 体检（`--no-browser`），把线路状态快照、徽标数据和趋势历史提交回仓库，本地 `git pull` 后页面线路状态即为最新。也可以到 [Actions](https://github.com/cloudy-one1/vip-video-parser-pro/actions) 页面手动触发（Run workflow），每次运行的结果摘要在运行详情页可见。
 
 两点口径说明：
 
 - Actions 的 runner 位于海外，自动体检是「全球 HTTP 视角」：个别国内解析站可能因跨境网络差异被判超时/异常，个人使用以本地深度体检（默认含无头浏览器复核）为准；
 - 徽标数据在 `.github/badges/lines.json`，经 shields.io endpoint 徽标渲染——私有仓库下 shields 读不到、徽标暂不显示，仓库转公开或部署 Pages 后自动生效。
+
+### 线路健康趋势
+
+自动体检每次运行都会把「可用线路数」追加到 `.github/badges/history.json`（保留最近 180 条），并生成趋势曲线 `.github/badges/trend.svg`（青蓝面积图 + 50% 虚线基准 + 当前值标注）：
+
+![线路可用率趋势](https://raw.githubusercontent.com/cloudy-one1/vip-video-parser-pro/main/.github/badges/trend.svg)
+
+- 与徽标一样，私有仓库下该图暂不渲染，仓库转公开或部署 Pages 后自动显示；每次 Actions 运行摘要里有「趋势(最近 7 次)」文字版，即时可见；
+- 趋势口径与自动体检一致（CI 海外 runner 的 HTTP-only 视角）；本地手动体检想累积历史的话：`python tools/line_checker.py --no-browser --history ..\.github\badges\history.json --trend-svg ..\.github\badges\trend.svg`。
 
 ## 添加解析线路
 

@@ -33,7 +33,9 @@ jobs:
           python "VIP视频解析Pro/tools/line_checker.py" \
             --no-browser --timeout 12 \
             --badge ".github/badges/lines.json" \
-            --summary-md ".github/badges/summary.md"
+            --summary-md ".github/badges/summary.md" \
+            --history ".github/badges/history.json" \
+            --trend-svg ".github/badges/trend.svg"
 
       - name: 输出运行摘要
         run: cat ".github/badges/summary.md" >> "$GITHUB_STEP_SUMMARY"
@@ -42,7 +44,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "VIP视频解析Pro/js/lines-status.json" "VIP视频解析Pro/js/lines-status.js" ".github/badges/lines.json"
+          git add "VIP视频解析Pro/js/lines-status.json" "VIP视频解析Pro/js/lines-status.js" ".github/badges/lines.json" ".github/badges/history.json" ".github/badges/trend.svg"
           if git diff --cached --quiet; then
             echo "快照无变化,跳过提交"
             exit 0
