@@ -1,0 +1,51 @@
+name: 线路体检
+
+on:
+  schedule:
+    - cron: "0 1 * * *" # UTC 01:00 = 北京时间每天 09:00
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: line-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 准备 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装依赖
+        run: pip install "scrapling[all]>=0.5"
+
+      # 海外 runner 的 HTTP-only 体检(口径见 README「自动体检」一节)
+      - name: 线路体检(HTTP-only)
+        run: |
+          python "VIP视频解析Pro/tools/line_checker.py" \
+            --no-browser --timeout 12 \
+            --badge ".github/badges/lines.json" \
+            --summary-md ".github/badges/summary.md"
+
+      - name: 输出运行摘要
+        run: cat ".github/badges/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 提交快照
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "VIP视频解析Pro/js/lines-status.json" "VIP视频解析Pro/js/lines-status.js" ".github/badges/lines.json"
+          if git diff --cached --quiet; then
+            echo "快照无变化,跳过提交"
+            exit 0
+          fi
+          git commit -m "chore(lines): 自动体检快照 $(date -u '+%F %H:%M UTC')"
+          git push

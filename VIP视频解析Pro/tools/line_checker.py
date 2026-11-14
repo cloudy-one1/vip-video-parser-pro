@@ -9,10 +9,13 @@
   python tools/line_checker.py --lines my.json    # 体检自定义线路列表(格式同 config.js 条目)
   python tools/line_checker.py --timeout 12       # 单站超时(秒),默认 10
   python tools/line_checker.py --stealth          # 所有站点都走无头浏览器重试(慢)
+  python tools/line_checker.py --no-browser       # 只走 HTTP 层,禁用无头浏览器复核(CI 用)
+  python tools/line_checker.py --badge out.json   # 额外输出 shields.io 徽标 JSON
+  python tools/line_checker.py --summary-md out.md  # 额外输出 Markdown 摘要表
 
-输出(写入 js/ 目录,前端启动时自动读取):
-  js/lines-status.json   供 http:// 部署时 fetch 读取
-  js/lines-status.js     供 file:// 直接打开时以 <script> 方式读取
+输出(写入 js/ 目录):
+  js/lines-status.js     前端启动时以 <script> 方式读取(file:// 与 http:// 均适用)
+  js/lines-status.json   供人阅读与 CI/徽标展示使用(前端实际不读取)
 
 状态含义:
   up       首页可达且内容正常
@@ -37,7 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CONFIG_JS = ROOT / "js" / "config.js"
 OUT_DIR = ROOT / "js"
 
-TOOL_VERSION = "1.0"
+TOOL_VERSION = "1.1"
 
 # 疑似 Cloudflare 质询/拦截页的特征(小写匹配)
 CF_MARKERS = [
@@ -119,8 +122,8 @@ def classify(code, title, text, final_url, home):
     return "down", f"HTTP {code}"
 
 
-def probe(line, timeout, force_stealth=False):
-    """探测一条线路的首页,返回标准化记录。"""
+def probe(line, timeout, force_stealth=False, use_browser=True):
+    """探测一条线路的首页,返回标准化记录;use_browser=False 时只信 HTTP 层结论。"""
     home = origin_of(line["prefix"])
     rec = {
         "id": line["id"],
@@ -157,7 +160,7 @@ def probe(line, timeout, force_stealth=False):
     status, note = classify(code, title, text, final_url, home)
 
     # HTTP 层不理想时,用无头浏览器复核一次(能过 Cloudflare 质询、执行 JS 跳转)
-    if status != "up" or force_stealth:
+    if use_browser and (status != "up" or force_stealth):
         b_code, b_title, b_text, b_final, b_err = stealth_probe(home, timeout)
         if b_code:
             rec["via"] = "browser"
@@ -197,12 +200,64 @@ def stealth_probe(home, timeout):
         return 0, "", "", home, f"{type(exc).__name__}: {exc}"[:200]
 
 
+def badge_color(ratio: float) -> str:
+    """可用率 -> shields 徽标颜色:>=75% 绿,>=50% 橙,其余红。"""
+    if ratio >= 0.75:
+        return "brightgreen"
+    if ratio >= 0.5:
+        return "orange"
+    return "red"
+
+
+STATUS_MARK = {"up": "🟢 可用", "blocked": "🟡 被拦", "down": "🔴 失效"}
+
+
+def write_badge(path: Path, alive: int, total: int) -> None:
+    """写 shields.io endpoint 格式徽标 JSON(https://shields.io/badges/endpoint-badge)。"""
+    badge = {
+        "schemaVersion": 1,
+        "label": "解析线路",
+        "message": f"{alive}/{total} 可用",
+        "color": badge_color(alive / total if total else 0),
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(badge, ensure_ascii=False), encoding="utf-8")
+
+
+def write_summary_md(path: Path, lines, results, alive: int, total: int) -> None:
+    """写 Markdown 摘要表(按 config.js 线路顺序),供 GitHub Actions 运行摘要展示。"""
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    rows = []
+    for ln in lines:
+        rec = results.get(ln["id"], {})
+        st = rec.get("status")
+        mark = STATUS_MARK.get(st, "⚪ 未体检")
+        ms = rec.get("ms")
+        note = rec.get("note") or ""
+        rows.append(f"| {ln['name']} | {mark} | {ms if ms is not None else '-'} | {note} |")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "# 线路体检摘要\n\n"
+        f"- 体检时间:{now}\n"
+        f"- 结果:**{alive}/{total} 可用**\n"
+        "- 口径:HTTP 层探测(`--no-browser`);GitHub Actions runner 位于海外,"
+        "个别国内站点可能因跨境网络差异被判异常,以本地深度体检为准\n\n"
+        "| 线路 | 状态 | 延迟(ms) | 说明 |\n"
+        "|---|---|---|---|\n" + "\n".join(rows) + "\n",
+        encoding="utf-8",
+    )
+
+
 def main():
     ap = argparse.ArgumentParser(description="VIP 视频解析 Pro 线路体检(Scrapling)")
     ap.add_argument("--lines", help="自定义线路 JSON 文件(缺省读 js/config.js)")
     ap.add_argument("--timeout", type=int, default=10, help="单站超时秒数,默认 10")
     ap.add_argument("--stealth", action="store_true", help="全部走无头浏览器复核")
+    ap.add_argument("--no-browser", action="store_true",
+                    help="禁用无头浏览器复核,只走 HTTP 层(CI 用)")
     ap.add_argument("--out-dir", default=str(OUT_DIR), help="快照输出目录")
+    ap.add_argument("--badge", help="额外写一个 shields.io 徽标 JSON 到指定路径")
+    ap.add_argument("--summary-md", help="额外写一份 Markdown 摘要表到指定路径")
     args = ap.parse_args()
 
     if args.lines:
@@ -213,7 +268,10 @@ def main():
     print(f"开始体检 {len(lines)} 条线路(超时 {args.timeout}s)…\n")
     results = {}
     with ThreadPoolExecutor(max_workers=min(8, len(lines))) as pool:
-        futs = {pool.submit(probe, ln, args.timeout, args.stealth): ln for ln in lines}
+        futs = {
+            pool.submit(probe, ln, args.timeout, args.stealth, not args.no_browser): ln
+            for ln in lines
+        }
         for fut in as_completed(futs):
             rec = fut.result()
             results[rec["id"]] = rec
@@ -222,7 +280,7 @@ def main():
             print(f"  {mark} {rec['name']:<10} {rec['status']:<8} {rec['ms']}ms  {rec['homepage']}{extra}")
 
     snapshot = {
-        "checkedAt": datetime.now().isoformat(timespec="seconds"),
+        "checkedAt": datetime.now().astimezone().isoformat(timespec="seconds"),
         "tool": f"line_checker/{TOOL_VERSION}",
         "lines": {lid: {k: v for k, v in r.items() if k not in ("id", "name")} for lid, r in results.items()},
     }
@@ -240,6 +298,13 @@ def main():
 
     alive = sum(1 for r in results.values() if r["status"] == "up")
     print(f"\n完成:{alive}/{len(lines)} 可用。快照已写入 {out / 'lines-status.json'} 与 lines-status.js")
+
+    if args.badge:
+        write_badge(Path(args.badge), alive, len(lines))
+        print(f"徽标已写入 {args.badge}")
+    if args.summary_md:
+        write_summary_md(Path(args.summary_md), lines, results, alive, len(lines))
+        print(f"摘要已写入 {args.summary_md}")
 
 
 if __name__ == "__main__":
