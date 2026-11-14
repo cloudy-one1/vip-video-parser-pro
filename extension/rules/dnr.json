@@ -1,0 +1,1002 @@
+[
+ {
+  "id": 1,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "googlesyndication.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 2,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "doubleclick.net"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 3,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "googletagservices.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 4,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "popads.net"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 5,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "popcash.net"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 6,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "propellerads.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 7,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "clickadu.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 8,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "exoclick.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 9,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "hilltopads.net"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 10,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "adskeeper.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 11,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "mgid.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 12,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "adsterra.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 13,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "adcash.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 14,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "zeropark.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 15,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "bidvertiser.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 16,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "juicyads.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 17,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "trafficstars.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 18,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "onclckds.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 19,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "requestDomains": [
+    "adplexity.com"
+   ],
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "main_frame",
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "media",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 20,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "urlFilter": "/pagead/",
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 21,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "urlFilter": "/ads.js",
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 22,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "urlFilter": "/ad.js",
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 23,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "urlFilter": "popunder",
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 24,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "urlFilter": "adservice",
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 25,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "urlFilter": "/adsystem/",
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 26,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "urlFilter": "/adserver",
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 27,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "urlFilter": "propeller",
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "other"
+   ]
+  }
+ },
+ {
+  "id": 28,
+  "priority": 1,
+  "action": {
+   "type": "block"
+  },
+  "condition": {
+   "urlFilter": "rollercdn",
+   "initiatorDomains": [
+    "lxyy.club",
+    "aibox.eu.org",
+    "1ljx.com",
+    "maccms.xyz",
+    "im1907.top",
+    "yemu.xyz",
+    "8090g.cn",
+    "aidouer.net",
+    "bd.jx.cn",
+    "txnp.cn",
+    "789jiexi.com",
+    "okjx.cc",
+    "wsyzy.vip"
+   ],
+   "resourceTypes": [
+    "sub_frame",
+    "script",
+    "image",
+    "xmlhttprequest",
+    "ping",
+    "other"
+   ]
+  }
+ }
+]

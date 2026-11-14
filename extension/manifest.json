@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "VIP解析 Pro · 解析页净化",
+  "version": "2.0.0",
+  "description": "为 VIP 视频解析 Pro 的 11 条解析线路站与嵌套播放器提供网络层广告拦截 + scriptlet 净化。规则仅对解析站生效,不影响日常浏览。",
+  "permissions": [
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "*://*.lxyy.club/*",
+    "*://*.aibox.eu.org/*",
+    "*://*.1ljx.com/*",
+    "*://*.maccms.xyz/*",
+    "*://*.im1907.top/*",
+    "*://*.yemu.xyz/*",
+    "*://*.8090g.cn/*",
+    "*://*.aidouer.net/*",
+    "*://*.bd.jx.cn/*",
+    "*://*.txnp.cn/*",
+    "*://*.789jiexi.com/*",
+    "*://*.okjx.cc/*",
+    "*://*.wsyzy.vip/*",
+    "https://cloudy-one1.github.io/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "shield_rules",
+        "enabled": true,
+        "path": "rules/dnr.json"
+      }
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.lxyy.club/*",
+        "*://*.aibox.eu.org/*",
+        "*://*.1ljx.com/*",
+        "*://*.maccms.xyz/*",
+        "*://*.im1907.top/*",
+        "*://*.yemu.xyz/*",
+        "*://*.8090g.cn/*",
+        "*://*.aidouer.net/*",
+        "*://*.bd.jx.cn/*",
+        "*://*.txnp.cn/*",
+        "*://*.789jiexi.com/*",
+        "*://*.okjx.cc/*",
+        "*://*.wsyzy.vip/*",
+        "https://cloudy-one1.github.io/vip-video-parser-pro/*"
+      ],
+      "js": ["content/engine.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}

@@ -141,6 +141,8 @@ python tools/line_checker.py --no-browser # 只走 HTTP 层快速体检（CI 同
 https://raw.githubusercontent.com/cloudy-one1/vip-video-parser-pro/main/userscript/parse-ad-shield.user.js
 ```
 
+**要网络层拦截？** 仓库还提供 [MV3 扩展壳](extension/README.md)（本地加载，Chrome/Edge）：`declarativeNetRequest` 在网络栈直接掐断广告请求（含弹窗导航），scriptlet 引擎与用户脚本同源，规则仅对解析站生效、不影响日常浏览。
+
 ## 添加解析线路
 
 点击「⚙ 管理线路」，在下方表单填写：
