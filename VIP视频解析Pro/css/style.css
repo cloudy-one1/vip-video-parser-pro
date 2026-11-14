@@ -186,6 +186,11 @@ body {
   border-color: var(--border);
 }
 .btn.ghost:hover { border-color: var(--glow); }
+.btn.ghost.on {
+  color: var(--glow);
+  border-color: var(--glow);
+  box-shadow: 0 0 14px var(--glow-soft);
+}
 
 .btn.small {
   height: 32px;
@@ -436,6 +441,7 @@ body {
   align-items: center;
   gap: 12px;
 }
+.history-toolbar[hidden] { display: none; } /* 作者 flex 会盖过 UA 的 [hidden]，需显式兜底 */
 
 .fav-filter {
   display: flex;
@@ -447,6 +453,22 @@ body {
   user-select: none;
 }
 .fav-filter input { accent-color: var(--glow); cursor: pointer; }
+
+.history-search {
+  height: 32px;
+  width: 180px;
+  padding: 0 12px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  background: var(--panel-input);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--dur-s) var(--ease-out);
+}
+.history-search::placeholder { color: var(--muted); }
+.history-search:focus { border-color: var(--glow); }
 
 .history-list {
   list-style: none;

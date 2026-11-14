@@ -65,6 +65,7 @@
         <span id="nowPlaying" class="now-playing" title=""></span>
         <div class="toolbar-actions">
           <button id="switchLineBtn" class="btn ghost small" type="button" title="切到下一条可用线路并重载当前视频">⇄ 换线重试</button>
+          <button id="autoSwitchBtn" class="btn ghost small" type="button" title="加载超时后自动换到下一条可用线路重试（最多尝试 3 次）">⏭ 自动换线</button>
           <button id="reloadBtn" class="btn ghost small" type="button">↻ 刷新</button>
           <button id="newTabBtn" class="btn ghost small" type="button">↗ 新窗口打开</button>
           <button id="closePlayerBtn" class="btn ghost small" type="button">✕ 关闭</button>
@@ -86,6 +87,7 @@
       <div class="history-head">
         <h2>观看记录</h2>
         <div id="historyToolbar" class="history-toolbar" hidden>
+          <input type="text" id="historySearch" class="history-search" placeholder="搜索链接 / 平台…" autocomplete="off" spellcheck="false">
           <label class="fav-filter"><input type="checkbox" id="favFilter"> 只看收藏</label>
           <button id="clearHistoryBtn" class="btn ghost small" type="button">清空记录</button>
         </div>

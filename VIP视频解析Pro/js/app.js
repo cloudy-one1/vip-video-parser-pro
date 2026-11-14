@@ -21,8 +21,13 @@
     lines: 'vvpro.lines',
     active: 'vvpro.activeLine',
     history: 'vvpro.history',
-    favFilter: 'vvpro.favFilter'
+    favFilter: 'vvpro.favFilter',
+    autoSwitch: 'vvpro.autoSwitch',
+    failMemo: 'vvpro.failMemo'
   };
+
+  const AUTO_SWITCH_MAX = 3;        // 加载超时后最多自动换线次数
+  const FAIL_MEMO_TTL = 30 * 60e3;  // 线路失败记忆有效期（30 分钟）
 
   /* ---------- 提示气泡 ---------- */
   function toast(msg, type) {
@@ -46,6 +51,10 @@
   if (!Array.isArray(history)) history = [];
 
   let filterFav = !!LS.get(KEYS.favFilter, false);
+  let autoSwitch = LS.get(KEYS.autoSwitch, true);  // 超时自动换线开关
+  let failMemo = LS.get(KEYS.failMemo, {});        // 线路近期失败记录：id -> 时间戳
+  if (!failMemo || typeof failMemo !== 'object') failMemo = {};
+  let historyQuery = '';
   let currentUrl = '';
 
   const saveLines = () => { LS.set(KEYS.lines, lines); LS.set(KEYS.active, activeLineId); };
@@ -218,25 +227,70 @@
   }
 
   /* ---------- 智能换线 ---------- */
-  function nextHealthyLine(fromId) {
+  /* 失败记忆：线路加载超时后短期记一笔，智能换线先绕开它 */
+  function markFail(lineId) {
+    failMemo[lineId] = Date.now();
+    LS.set(KEYS.failMemo, failMemo);
+  }
+
+  function clearFail(lineId) {
+    if (lineId in failMemo) {
+      delete failMemo[lineId];
+      LS.set(KEYS.failMemo, failMemo);
+    }
+  }
+
+  function pruneFailMemo() {
+    const now = Date.now();
+    Object.keys(failMemo).forEach(id => { if (now - failMemo[id] > FAIL_MEMO_TTL) clearFail(id); });
+  }
+
+  function recentlyFailed(id) {
+    const ts = failMemo[id];
+    return !!ts && (Date.now() - ts) < FAIL_MEMO_TTL;
+  }
+
+  function nextHealthyLine(fromId, excludeIds, avoidDown) {
+    const exclude = excludeIds || [];
     const idx = lines.findIndex(l => l.id === fromId);
+    // 第一优先：体检可用、且近期没失败过的线路
     for (let step = 1; step <= lines.length; step++) {
       const cand = lines[(idx + step) % lines.length];
-      if (statusOf(cand.id).status === 'up') return cand;
+      if (!exclude.includes(cand.id) && statusOf(cand.id).status === 'up' && !recentlyFailed(cand.id)) return cand;
     }
-    // 没有已知可用的线路，就顺序换下一条
-    return lines[(idx + 1) % lines.length];
+    // 第二优先：可用但近期失败过的线路
+    for (let step = 1; step <= lines.length; step++) {
+      const cand = lines[(idx + step) % lines.length];
+      if (!exclude.includes(cand.id) && statusOf(cand.id).status === 'up') return cand;
+    }
+    // 第三优先：非失效线路（自动换线/重播兜底用，避免撞上已知失效的线）
+    if (avoidDown) {
+      for (let step = 1; step <= lines.length; step++) {
+        const cand = lines[(idx + step) % lines.length];
+        if (!exclude.includes(cand.id) && statusOf(cand.id).status !== 'down') return cand;
+      }
+    }
+    // 兜底：顺序换下一条没试过的
+    for (let step = 1; step <= lines.length; step++) {
+      const cand = lines[(idx + step) % lines.length];
+      if (!exclude.includes(cand.id)) return cand;
+    }
+    return null; // 全部被排除（自动换线把所有线路都试完时）
   }
 
   function switchLine() {
     if (lines.length < 2) { toast('只有一条线路，无法换线', 'error'); return; }
-    const target = nextHealthyLine(activeLineId);
-    if (target.id === activeLineId) { toast('没有其他线路可换', 'error'); return; }
+    const target = nextHealthyLine(activeLineId, [activeLineId]);
+    if (!target || target.id === activeLineId) { toast('没有其他线路可换', 'error'); return; }
     activeLineId = target.id;
     saveLines();
     renderLines();
     toast('已换到线路：' + target.name);
     if (currentUrl) play(currentUrl, { skipHistory: true });
+  }
+
+  function renderAutoSwitch() {
+    $('#autoSwitchBtn').classList.toggle('on', autoSwitch);
   }
 
   /* ---------- 线路管理 ---------- */
@@ -345,23 +399,58 @@
     clearTimeout(play._t);
     play._t = setTimeout(() => {
       if (frameLoaded) return;
+      markFail(line.id);
+      const tried = options.tried || [];
+      // 自动换线：超时后自动换下一条，最多试 AUTO_SWITCH_MAX 次，全失败再回到手动引导
+      if (autoSwitch && tried.length < AUTO_SWITCH_MAX) {
+        const target = nextHealthyLine(line.id, tried.concat(line.id), true);
+        if (target) {
+          activeLineId = target.id;
+          saveLines();
+          renderLines();
+          $('#loadingMsg').textContent = '线路「' + line.name + '」超时，已自动换到「' + target.name + '」（第 ' + (tried.length + 1) + '/' + AUTO_SWITCH_MAX + ' 次）';
+          play(url, { skipHistory: true, tried: tried.concat(line.id) });
+          return;
+        }
+      }
       $('#loadingMsg').textContent = '线路加载超时，可能已失效或禁止内嵌';
       $('#loadingSwitchBtn').hidden = false;
     }, 8000);
 
-    if (!options.skipHistory) addHistory(url);
+    if (!options.skipHistory) addHistory(url, line);
     section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  $('#player').addEventListener('load', () => { frameLoaded = true; hideLoading(); });
+  $('#player').addEventListener('load', () => {
+    frameLoaded = true;
+    clearFail(activeLineId);   // 正常加载即摘掉失败记忆
+    // 把这条视频最后有响应的线路写回观看记录，重播时优先用它
+    if (currentUrl) {
+      const rec = history.find(x => x.url === currentUrl);
+      if (rec && rec.lineId !== activeLineId) {
+        rec.lineId = activeLineId;
+        rec.lineName = (lines.find(l => l.id === activeLineId) || {}).name || '';
+        saveHistory();
+        renderHistory();
+      }
+    }
+    hideLoading();
+  });
 
   /* ---------- 观看记录 ---------- */
-  function addHistory(url) {
+  function addHistory(url, line) {
     const existed = history.find(h => h.url === url);
     const fav = existed ? existed.fav : false;
     history = history.filter(h => h.url !== url);
     const platform = detectPlatform(url);
-    history.unshift({ url: url, platform: platform ? platform.name : '其他', fav: fav, time: Date.now() });
+    history.unshift({
+      url: url,
+      platform: platform ? platform.name : '其他',
+      fav: fav,
+      time: Date.now(),
+      lineId: line ? line.id : null,     // 记住这条记录用的线路，重播时自动切回
+      lineName: line ? line.name : ''
+    });
     if (history.length > 50) history = history.slice(0, 50);
     saveHistory();
     renderHistory();
@@ -380,8 +469,16 @@
   function renderHistory() {
     const list = $('#historyList');
     list.innerHTML = '';
-    const shown = filterFav ? history.filter(h => h.fav) : history;
-    $('#historyEmpty').hidden = shown.length > 0;
+    const q = historyQuery.toLowerCase();
+    const shown = history.filter(h =>
+      (!filterFav || h.fav) &&
+      (!q || (h.url + ' ' + (h.platform || '')).toLowerCase().includes(q))
+    );
+    const empty = $('#historyEmpty');
+    empty.hidden = shown.length > 0;
+    empty.textContent = !history.length ? '暂无记录，解析过的视频会自动出现在这里'
+      : (!shown.length && q) ? '没有匹配「' + historyQuery + '」的记录'
+      : (!shown.length) ? '没有符合条件的记录' : '';
     $('#historyToolbar').hidden = history.length === 0;
 
     shown.forEach(h => {
@@ -415,6 +512,38 @@
       time.textContent = timeAgo(h.time);
       main.append(dot, info, time);
       main.addEventListener('click', () => {
+        // 重播选线：优先切回这条记录上次用的线路；它失效/被删/刚超时过时，
+        // 只在能换到「严格更优」的线路上才自动切换，否则留在当前线路不折腾
+        const stored = h.lineId ? lines.find(l => l.id === h.lineId) : null;
+        const storedSt = stored ? statusOf(stored.id).status : null;
+        const curSt = statusOf(activeLineId).status;
+        let target = null;
+        let note = '';
+        if (stored && stored.id !== activeLineId && storedSt !== 'down' && !recentlyFailed(stored.id)) {
+          target = stored;                              // 上次的线路还健康 → 直接切回
+        } else if (!stored || storedSt === 'down' || recentlyFailed(stored.id)) {
+          const cand = nextHealthyLine(activeLineId, [activeLineId], true);
+          const candSt = cand ? statusOf(cand.id).status : 'down';
+          const better = cand && candSt !== 'down' &&
+            ((curSt === 'down' && candSt !== 'down') || (curSt !== 'up' && candSt === 'up'));
+          if (better) {
+            target = cand;
+          } else if (h.lineId && !stored) {
+            note = '已删除，继续用当前线路';
+          } else if (storedSt === 'down') {
+            note = '已失效，继续用当前线路';
+          } else if (recentlyFailed(stored.id)) {
+            note = '刚超时过，继续用当前线路';
+          }
+        }
+        if (target && target.id !== activeLineId) {
+          activeLineId = target.id;
+          saveLines();
+          renderLines();
+          toast('已切到线路：' + target.name);
+        } else if (note) {
+          toast('上次线路「' + (h.lineName || '原线路') + '」' + note);
+        }
         $('#urlInput').value = h.url;
         updateBadge();
         play(h.url); // 会置顶该记录
@@ -502,6 +631,25 @@
   $('#switchLineBtn').addEventListener('click', switchLine);
   $('#loadingSwitchBtn').addEventListener('click', switchLine);
 
+  $('#autoSwitchBtn').addEventListener('click', () => {
+    autoSwitch = !autoSwitch;
+    LS.set(KEYS.autoSwitch, autoSwitch);
+    renderAutoSwitch();
+    toast(autoSwitch ? '超时自动换线：开' : '超时自动换线：关');
+  });
+
+  $('#historySearch').addEventListener('input', (e) => {
+    historyQuery = e.target.value.trim();
+    renderHistory();
+  });
+  $('#historySearch').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.target.value = '';
+      historyQuery = '';
+      renderHistory();
+    }
+  });
+
   $('#resetLinesBtn').addEventListener('click', () => {
     lines = window.DEFAULT_LINES.map(l => Object.assign({}, l));
     activeLineId = lines[0].id;
@@ -561,6 +709,8 @@
 
   /* ---------- 初始化 ---------- */
   $('#favFilter').checked = filterFav;
+  pruneFailMemo();
+  renderAutoSwitch();
   renderLines();
   renderHistory();
   renderStatusSummary();
