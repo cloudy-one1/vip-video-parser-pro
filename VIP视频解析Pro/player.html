@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0d13">
+  <title>播放器 · VIP 视频解析 Pro</title>
+  <style>
+    /* 自建 hls.js 播放器:云搜索 / m3u8 直连专用,全程零第三方页面 */
+    :root { color-scheme: dark; }
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    body { display: flex; align-items: center; justify-content: center;
+           font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
+    video { width: 100%; height: 100%; background: #000; outline: none; }
+    .overlay {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 14px;
+      background: #0b0d13; color: #9aa3ba; font-size: 14px; text-align: center; padding: 0 24px;
+    }
+    .overlay.hide { display: none; }
+    .overlay .msg { max-width: 420px; line-height: 1.7; }
+    .overlay button {
+      padding: 8px 18px; border-radius: 9px; border: 1px solid rgba(255,255,255,.16);
+      background: transparent; color: #e7eaf3; font-size: 13.5px; font-family: inherit; cursor: pointer;
+    }
+    .overlay button:hover { border-color: #7dd3fc; color: #7dd3fc; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  </style>
+</head>
+<body>
+  <video id="video" controls autoplay playsinline></video>
+  <div id="overlay" class="overlay">
+    <p class="msg" id="msg">正在加载视频流…</p>
+    <div class="row" id="actions" hidden>
+      <button id="retryBtn" type="button">↻ 重试</button>
+      <button id="remoteBtn" type="button">换官方播放器打开</button>
+    </div>
+  </div>
+
+  <!-- hls.js(Apache-2.0)本地化,避免任何 CDN 依赖 -->
+  <script src="js/vendor/hls.light.min.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var params = new URLSearchParams(location.search);
+      var src = params.get('src') || '';
+      var video = document.getElementById('video');
+      var overlay = document.getElementById('overlay');
+      var msg = document.getElementById('msg');
+      var actions = document.getElementById('actions');
+      var retryBtn = document.getElementById('retryBtn');
+      var remoteBtn = document.getElementById('remoteBtn');
+      var hls = null;
+      var started = false;
+
+      function setMsg(text, withActions) {
+        msg.textContent = text;
+        actions.hidden = !withActions;
+        overlay.classList.remove('hide');
+      }
+      function hideOverlay() { overlay.classList.add('hide'); }
+
+      function fail(text) { setMsg(text, true); }
+
+      function start() {
+        if (!src) { fail('缺少视频地址(?src=)'); return; }
+        if (started) { video.pause(); }   // 重试时先停掉旧流
+        started = true;
+        hideOverlay();
+        setMsg('正在加载视频流…', false);
+
+        var isM3u8 = /\.m3u8([?#]|$)/i.test(src);
+        // Safari 原生支持 HLS,直接喂给 video
+        if (window.Hls && window.Hls.isSupported() && isM3u8) {
+          if (hls) { hls.destroy(); hls = null; }
+          hls = new window.Hls({ maxBufferLength: 30 });
+          hls.loadSource(src);
+          hls.attachMedia(video);
+          hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
+            hideOverlay();
+            var p = video.play();
+            if (p && p.catch) p.catch(function () { /* 自动播放被策略拦时,用户手点播放即可 */ });
+          });
+          hls.on(window.Hls.Events.ERROR, function (evt, data) {
+            if (!data || !data.fatal) return;
+            if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR && data.details === 'manifestParsingError') {
+              fail('视频流地址无法解析(可能已失效)');
+            } else {
+              fail('视频流加载失败(' + data.details + ')');
+            }
+          });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl') && isM3u8) {
+          video.src = src;
+          video.play().catch(function () {});
+        } else {
+          // 非 HLS 地址(容错):直接交给 video
+          video.src = src;
+          video.play().catch(function () {});
+        }
+      }
+
+      retryBtn.addEventListener('click', function () { started = false; start(); });
+      remoteBtn.addEventListener('click', function () {
+        // 回退到无损云官方播放器(仍在沙箱 iframe 内,不会离开本站)
+        location.replace('https://wsyzy.vip/m3u8/?url=' + encodeURIComponent(src));
+      });
+
+      start();
+    })();
+  </script>
+</body>
+</html>

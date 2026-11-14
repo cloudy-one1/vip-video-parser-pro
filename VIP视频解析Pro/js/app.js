@@ -25,7 +25,8 @@
     autoSwitch: 'vvpro.autoSwitch',
     failMemo: 'vvpro.failMemo',
     cloudCache: 'vvpro.cloudCache',
-    proxyIdx: 'vvpro.proxyIdx'
+    proxyIdx: 'vvpro.proxyIdx',
+    lineStats: 'vvpro.lineStats'
   };
 
   const AUTO_SWITCH_MAX = 3;        // 加载超时后最多自动换线次数
@@ -63,6 +64,8 @@
   if (!cloudCache.search) cloudCache.search = {};
   if (!cloudCache.detail) cloudCache.detail = {};
   let cloudProxyIdx = LS.get(KEYS.proxyIdx, 0) | 0;
+  let lineStats = LS.get(KEYS.lineStats, {});      // 线路长期质量: id -> {ok, fail}
+  if (!lineStats || typeof lineStats !== 'object') lineStats = {};
 
   const saveLines = () => { LS.set(KEYS.lines, lines); LS.set(KEYS.active, activeLineId); };
   const saveHistory = () => LS.set(KEYS.history, history);
@@ -212,6 +215,11 @@
       btn.append(dot, document.createTextNode(line.name));
       const bits = [line.prefix + '{视频地址}', '状态：' + meta.label + (st.note ? '（' + st.note + '）' : '')];
       if (st.ms) bits.push('延迟：' + st.ms + 'ms');
+      const score = scoreOf(line.id);
+      if (score !== null) {
+        const rec = lineStats[line.id];
+        bits.push('本地成功率：' + Math.round(score * 100) + '%（' + rec.ok + '/' + (rec.ok + rec.fail) + '）');
+      }
       if (i < 9) bits.push('Alt+' + (i + 1));
       btn.title = bits.join('\n');
       btn.addEventListener('click', () => selectLine(line.id));
@@ -257,13 +265,43 @@
     return !!ts && (Date.now() - ts) < FAIL_MEMO_TTL;
   }
 
+  /* ---------- 线路质量统计（本地长期学习） ----------
+   * load 成功 / 超时 / 手动反馈都会累计；智能换线在体检可用的线路里优先选成功率高的。
+   */
+  function bumpStat(lineId, kind) {
+    if (!lineId) return;
+    const rec = lineStats[lineId] || { ok: 0, fail: 0 };
+    rec[kind]++;
+    lineStats[lineId] = rec;
+    LS.set(KEYS.lineStats, lineStats);
+  }
+
+  function scoreOf(lineId) {
+    const rec = lineStats[lineId];
+    if (!rec) return null;
+    const total = (rec.ok || 0) + (rec.fail || 0);
+    return total ? (rec.ok || 0) / total : null;
+  }
+
+  function pruneLineStats() {
+    let dirty = false;
+    Object.keys(lineStats).forEach(id => {
+      if (!lines.some(l => l.id === id)) { delete lineStats[id]; dirty = true; }
+    });
+    if (dirty) LS.set(KEYS.lineStats, lineStats);
+  }
+
   function nextHealthyLine(fromId, excludeIds, avoidDown) {
     const exclude = excludeIds || [];
     const idx = lines.findIndex(l => l.id === fromId);
-    // 第一优先：体检可用、且近期没失败过的线路
+    // 第一优先：体检可用、且近期没失败过的线路；多条命中时按本地成功率择优
+    const tier1 = [];
     for (let step = 1; step <= lines.length; step++) {
       const cand = lines[(idx + step) % lines.length];
-      if (!exclude.includes(cand.id) && statusOf(cand.id).status === 'up' && !recentlyFailed(cand.id)) return cand;
+      if (!exclude.includes(cand.id) && statusOf(cand.id).status === 'up' && !recentlyFailed(cand.id)) tier1.push(cand);
+    }
+    if (tier1.length) {
+      return tier1.sort((a, b) => (scoreOf(b.id) ?? -1) - (scoreOf(a.id) ?? -1))[0];
     }
     // 第二优先：可用但近期失败过的线路
     for (let step = 1; step <= lines.length; step++) {
@@ -389,6 +427,7 @@
 
   /* ---------- 播放 ---------- */
   let frameLoaded = false;   // 区分「load 事件正常触发」与「8 秒兜底超时」
+  let playLineId = null;     // 本次播放真正走了解析线路时才有值(m3u8 直连/自家播放器为 null)
 
   function hideLoading() {
     clearTimeout(play._t);
@@ -409,11 +448,12 @@
     if (!line) { toast('没有可用线路，请先添加', 'error'); return; }
 
     currentUrl = url;
-    // m3u8 直连：粘贴 .m3u8 链接直接用无损云播放器播放，不走解析线路
+    // m3u8 直连：粘贴 .m3u8 链接直接用自家播放器播放，不走解析线路
     const isM3u8 = /^https?:\/\/[^\s"'<>]+\.m3u8([?#]|$)/i.test(url);
     const parseUrl = (isM3u8 && window.CLOUD)
       ? window.CLOUD.PLAYER + encodeURIComponent(url)
       : buildParseUrl(line, url);
+    playLineId = isM3u8 ? null : line.id;
 
     const section = $('#playerSection');
     const frame = $('#player');
@@ -439,6 +479,7 @@
     play._t = setTimeout(() => {
       if (frameLoaded) return;
       markFail(line.id);
+      bumpStat(line.id, 'fail');
       const tried = options.tried || [];
       // 自动换线：超时后自动换下一条，最多试 AUTO_SWITCH_MAX 次，全失败再回到手动引导
       if (autoSwitch && tried.length < AUTO_SWITCH_MAX) {
@@ -465,13 +506,14 @@
 
   $('#player').addEventListener('load', () => {
     frameLoaded = true;
-    clearFail(activeLineId);   // 正常加载即摘掉失败记忆
-    // 把这条视频最后有响应的线路写回观看记录，重播时优先用它
-    if (currentUrl) {
+    // 只有真走了解析线路的播放才计入质量统计/解除失败记忆/回写历史
+    if (playLineId && currentUrl) {
+      clearFail(playLineId);   // 正常加载即摘掉失败记忆
+      bumpStat(playLineId, 'ok');
       const rec = history.find(x => x.url === currentUrl);
-      if (rec && rec.lineId !== activeLineId) {
-        rec.lineId = activeLineId;
-        rec.lineName = (lines.find(l => l.id === activeLineId) || {}).name || '';
+      if (rec && rec.lineId !== playLineId) {   // 最后有响应的线路写回观看记录
+        rec.lineId = playLineId;
+        rec.lineName = (lines.find(l => l.id === playLineId) || {}).name || '';
         saveHistory();
         renderHistory();
       }
@@ -921,6 +963,16 @@
     toast(autoSwitch ? '超时自动换线：开' : '超时自动换线：关');
   });
 
+  // 手动反馈：当前线路画面有问题(卡死/水印/声画不同步)时,记入失败记忆并立即换线
+  $('#badLineBtn').addEventListener('click', () => {
+    const line = lines.find(l => l.id === activeLineId);
+    if (!line) return;
+    markFail(line.id);
+    bumpStat(line.id, 'fail');
+    toast('已记住「' + line.name + '」这次不行');
+    if (lines.length >= 2) switchLine();
+  });
+
   $('#historySearch').addEventListener('input', (e) => {
     historyQuery = e.target.value.trim();
     renderHistory();
@@ -977,6 +1029,7 @@
     $('#player').src = 'about:blank';
     $('#playerSection').hidden = true;
     currentUrl = '';
+    playLineId = null;
   });
 
   $('#favFilter').addEventListener('change', (e) => {
@@ -998,6 +1051,7 @@
   $('#favFilter').checked = filterFav;
   pruneFailMemo();
   pruneCloudCache();
+  pruneLineStats();
   renderAutoSwitch();
   renderLines();
   renderHistory();

@@ -26,7 +26,8 @@ window.DEFAULT_LINES = [
 window.CLOUD = {
   SEARCH_API: 'https://wsyzy.cc/index.php/ajax/suggest?mid=1&wd=',
   DETAIL_API: 'https://api.wsyzy.net/api.php/provide/vod/?ac=detail&ids=',
-  PLAYER: 'https://wsyzy.vip/m3u8/?url=',
+  PLAYER: 'player.html?src=',                       /* 自建 hls.js 播放器(零第三方页面) */
+  PLAYER_REMOTE: 'https://wsyzy.vip/m3u8/?url=',    /* 官方回退:自建播放器失败时在 player.html 内可一键切换 */
   /* 代理链：按序尝试，成功者记入 localStorage 下次优先 */
   PROXIES: [
     u => u,

@@ -74,6 +74,7 @@
         <span id="nowPlaying" class="now-playing" title=""></span>
         <div class="toolbar-actions">
           <button id="switchLineBtn" class="btn ghost small" type="button" title="切到下一条可用线路并重载当前视频">⇄ 换线重试</button>
+          <button id="badLineBtn" class="btn ghost small" type="button" title="当前线路画面有问题？记入失败记忆并立即自动换线">👎 这条不行</button>
           <button id="autoSwitchBtn" class="btn ghost small" type="button" title="加载超时后自动换到下一条可用线路重试（最多尝试 3 次）">⏭ 自动换线</button>
           <button id="reloadBtn" class="btn ghost small" type="button">↻ 刷新</button>
           <button id="newTabBtn" class="btn ghost small" type="button">↗ 新窗口打开</button>
@@ -81,14 +82,16 @@
         </div>
       </div>
       <div class="player-frame">
-        <iframe id="player" scrolling="no" allow="autoplay; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe>
+        <iframe id="player" scrolling="no"
+                sandbox="allow-scripts allow-same-origin"
+                allow="autoplay; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe>
         <div id="playerLoading" class="player-loading">
           <div class="spinner"></div>
           <p id="loadingMsg">正在加载线路…</p>
           <button id="loadingSwitchBtn" class="btn primary small" type="button" hidden>⇄ 换一条线路试试</button>
         </div>
       </div>
-      <p class="player-tip">提示：若画面长时间空白或无法播放，多为该线路失效或禁止内嵌，请切换其他线路，或使用「新窗口打开」。</p>
+      <p class="player-tip">已启用安全沙箱：解析页内无法弹窗、劫持页面、自动下载或弹出对话框。若其页面出现任何「下载 / 允许通知 / 充值」字样，都不是本站功能，请勿理会；画面卡死或质量差就点「👎 这条不行」。</p>
     </section>
 
     <!-- 观看记录 -->
