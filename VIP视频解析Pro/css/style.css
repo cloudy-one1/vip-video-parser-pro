@@ -266,6 +266,19 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* 解析页净化脚本激活徽标 */
+.shield-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  color: #4ade80;
+  font-size: 12.5px;
+  cursor: help;
+  background: rgba(74, 222, 128, 0.06);
+}
+
 /* ========= 线路管理面板 ========= */
 .line-panel {
   margin-top: 16px;

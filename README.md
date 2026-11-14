@@ -125,6 +125,21 @@ python tools/line_checker.py --no-browser # 只走 HTTP 层快速体检（CI 同
 3. **线路质量本地学习**：每条线路的成功/失败持续累计，智能换线按本地成功率择优，配合「👎 这条不行」手动反馈与失败记忆，越用越准；
 4. **诚实的边界**：往第三方 iframe 里注入广告拦截是静态页做不到的（需要浏览器扩展），解析页内部的残余骚扰请搭配 AdGuard / uBlock Origin；项目不做 DRM 破解。
 
+## 解析页净化用户脚本（可选增强）
+
+安全沙箱只能从外面封住解析页的"弹窗/劫持/下载"，而**解析页内部的广告与骗点击元素**需要浏览器扩展级的权限才能净化。项目为此提供了一个伴生用户脚本 [`userscript/parse-ad-shield.user.js`](userscript/parse-ad-shield.user.js)：
+
+- **机制来源**：用 REA 对 AdGuard 扩展做了逆向分析，蒸馏其 scriptlet 引擎的分发机制与实战规则形态（`prevent-window-open`、`abort-on-property-read`、化妆品过滤等），代码为独立实现（MIT）；
+- **净化内容**：`window.open` 消弹窗（返回无害壳防崩溃）、Notification 权限自动拒绝（防"允许通知"钓鱼）、移除 meta refresh 跳转链、按已知广告域名关键词断供脚本/iframe、藏匿常见广告位、MutationObserver 拦动态注入的广告；
+- **与站内无缝联动**：脚本默认注入所有帧，所以**站内解析 iframe 里的解析页也会被净化**——这是静态站自身做不到、只有用户脚本能做到的事；脚本还会在本站写入激活标记，页面线路行会显示「🛡 净化已启用」徽标；
+- **覆盖范围**：11 条默认线路站点 + 无损云播放器域；只净化广告，不碰视频流。
+
+安装方法：装好 [Tampermonkey](https://www.tampermonkey.net/) 或 Violentmonkey 后，打开下面这个链接按提示安装即可（也可手动新建脚本粘贴全文）：
+
+```
+https://raw.githubusercontent.com/cloudy-one1/vip-video-parser-pro/main/userscript/parse-ad-shield.user.js
+```
+
 ## 添加解析线路
 
 点击「⚙ 管理线路」，在下方表单填写：

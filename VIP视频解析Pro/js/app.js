@@ -1053,6 +1053,11 @@
   pruneCloudCache();
   pruneLineStats();
   renderAutoSwitch();
+  // 解析页净化用户脚本（伴生组件）激活检测：脚本会在本站写入标记
+  try {
+    const shield = LS.get('vvpro.adShield', null);
+    if (shield && shield.v) $('#shieldBadge').hidden = false;
+  } catch (e) { /* 忽略 */ }
   renderLines();
   renderHistory();
   renderStatusSummary();
