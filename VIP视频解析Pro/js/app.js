@@ -135,7 +135,7 @@
       btn.textContent = '⚡ 体检';
       btn.disabled = false;
       const up = lines.filter(l => statusOf(l.id).status === 'up').length;
-      toast('体检完成：' + up + '/' + lines.length + ' 条可达');
+      toast('查完了：' + up + '/' + lines.length + ' 条通');
     };
 
     lines.forEach(line => {
@@ -162,9 +162,9 @@
     const src = known.some(l => statusOf(l.id).source === 'tool')
       ? '深度体检'
       : '浏览器快测';
-    const ago = snapshotTime ? ' · ' + timeAgo(new Date(snapshotTime).getTime()) : '';
+    const ago = snapshotTime ? '，约 ' + timeAgo(new Date(snapshotTime).getTime()) : '';
     el.hidden = false;
-    el.textContent = src + '：' + up + '/' + lines.length + ' 条线路可用' + ago;
+    el.innerHTML = '今晚 <span class="hi-count num">' + up + '/' + lines.length + '</span> 条线路通（' + src + ago + '）';
   }
 
   /* ---------- 平台识别 ---------- */
@@ -464,8 +464,8 @@
     const platform = detectPlatform(url);
     const nowPlaying = $('#nowPlaying');
     nowPlaying.textContent = (isM3u8
-      ? (options.title ? options.title + ' · ' : 'm3u8直连 · ')
-      : platform ? platform.name + ' · ' : '') + url;
+      ? (options.title ? options.title + '，' : 'm3u8直连，')
+      : platform ? platform.name + '，' : '') + url;
     nowPlaying.title = url;
 
     frame.src = parseUrl;
@@ -561,10 +561,14 @@
       (!q || (h.url + ' ' + (h.platform || '') + ' ' + (h.title || '')).toLowerCase().includes(q))
     );
     const empty = $('#historyEmpty');
+    renderHistory.tip = renderHistory.tip || empty.innerHTML;
     empty.hidden = shown.length > 0;
-    empty.textContent = !history.length ? '暂无记录，解析过的视频会自动出现在这里'
-      : (!shown.length && q) ? '没有匹配「' + historyQuery + '」的记录'
-      : (!shown.length) ? '没有符合条件的记录' : '';
+    if (!history.length) {
+      empty.innerHTML = renderHistory.tip;   // 还原 index.html 里的手写空态
+    } else {
+      empty.textContent = (!shown.length && q) ? '没有匹配「' + historyQuery + '」的记录'
+        : (!shown.length) ? '没有符合条件的记录' : '';
+    }
     $('#historyToolbar').hidden = history.length === 0;
 
     shown.forEach(h => {
@@ -785,7 +789,7 @@
     // 面板保持开着：换集不用重新搜索
     play(ep.url, {
       skipHistory: false,
-      title: (cloudState.candName || '') + ' · ' + ep.name
+      title: (cloudState.candName ? cloudState.candName + ' ' : '') + ep.name
     });
     setCloudState({});   // 重新渲染选集网格，让当前集高亮跟上
   }
@@ -801,7 +805,7 @@
       const wrap = document.createElement('div');
       wrap.className = 'cloud-loading';
       const sp = document.createElement('div');
-      sp.className = 'spinner small';
+      sp.className = 'spinner small keep-motion';
       const msg = document.createElement('p');
       msg.textContent = st.cand ? '正在获取「' + st.candName + '」的选集…' : '正在搜索「' + st.kw + '」…';
       wrap.append(sp, msg);
@@ -862,7 +866,7 @@
     }
 
     if (st.view === 'episodes') {
-      $('#searchPanelTitle').textContent = st.candName + ' · 共 ' + st.episodes.length + ' 集';
+      $('#searchPanelTitle').textContent = st.candName + '，共 ' + st.episodes.length + ' 集';
       const head = document.createElement('div');
       head.className = 'ep-head';
       const back = document.createElement('button');

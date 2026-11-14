@@ -3,36 +3,60 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0b0d13">
+  <meta name="theme-color" content="#100d0a">
+  <meta name="description" content="m3u8 与视频流直连播放页:本地 hls.js 引擎,零第三方页面依赖,含失败重试与官方播放器回退。">
   <title>播放器 · VIP 视频解析 Pro</title>
   <style>
+    /* Hallmark · shape: app screen · genre: custom · theme: custom · redesign: full
+     * idea: "深夜放映室:灯只照画面" · axes: dark/handwritten/warm · paper: oklch(9% 0.012 70) · accent: oklch(80% 0.115 75) · v2.0.0 */
+    /* Hallmark · pre-emit critique: P3 H3 E4 S4 R4 V4 · weakest: E, a bare player page has little to execute; tokens mirror the main page's warm ground, the face stays system by the project's zero-CDN rule */
+    /* Hallmark · waive 28b · no poster asset exists and none may be invented; the overlay covers the frame until the stream starts · the video is the page's only content */
     /* 自建 hls.js 播放器:云搜索 / m3u8 直连专用,全程零第三方页面 */
-    :root { color-scheme: dark; }
-    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    :root {
+      color-scheme: dark;
+      --color-video-ground: oklch(9% 0.012 70);
+      --color-ink: oklch(92% 0.02 85);
+      --color-ink-2: oklch(84% 0.025 80);
+      --color-muted: oklch(67% 0.028 75);
+      --color-rule-2: oklch(42% 0.024 72);
+      --color-accent: oklch(80% 0.115 75);
+      --color-accent-ink: oklch(17% 0.02 70);
+      --color-focus: oklch(84% 0.13 80);
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --dur-short: 220ms;
+    }
+    html { scrollbar-color: var(--color-rule-2) var(--color-video-ground); }
+    ::selection { background: var(--color-accent); color: var(--color-accent-ink); }
+    html, body { margin: 0; height: 100%; background: var(--color-video-ground); overflow: clip; }
     body { display: flex; align-items: center; justify-content: center;
            font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
-    video { width: 100%; height: 100%; background: #000; outline: none; }
+    video { width: 100%; height: 100%; background: var(--color-video-ground); outline: none; }
+    video:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
     .overlay {
       position: absolute; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 14px;
-      background: #0b0d13; color: #9aa3ba; font-size: 14px; text-align: center; padding: 0 24px;
+      align-items: center; justify-content: center; gap: 16px;
+      background: var(--color-video-ground); color: var(--color-muted); font-size: 14px; text-align: center; padding: 0 24px;
     }
     .overlay.hide { display: none; }
     .overlay .msg { max-width: 420px; line-height: 1.7; }
     .overlay button {
-      padding: 8px 18px; border-radius: 9px; border: 1px solid rgba(255,255,255,.16);
-      background: transparent; color: #e7eaf3; font-size: 13.5px; font-family: inherit; cursor: pointer;
+      padding: 8px 16px; border: 1px solid var(--color-rule-2); border-radius: 8px;
+      background: transparent; color: var(--color-ink); font-size: 13.5px; font-family: inherit; cursor: pointer;
+      transition: border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
     }
-    .overlay button:hover { border-color: #7dd3fc; color: #7dd3fc; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .overlay button:hover { border-color: var(--color-accent); color: var(--color-accent); }
+    .overlay button:active { transform: translateY(1px); }
+    .overlay button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .overlay button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   </style>
 </head>
 <body>
-  <video id="video" controls autoplay playsinline></video>
+  <video id="video" controls playsinline></video>
   <div id="overlay" class="overlay">
     <p class="msg" id="msg">正在加载视频流…</p>
     <div class="row" id="actions" hidden>
-      <button id="retryBtn" type="button">↻ 重试</button>
+      <button id="retryBtn" type="button">重试</button>
       <button id="remoteBtn" type="button">换官方播放器打开</button>
     </div>
   </div>

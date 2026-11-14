@@ -1,0 +1,25 @@
+:root {
+  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px; --space-4xl: 144px;
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.2rem; --text-xl: 1.44rem; --text-2xl: 1.728rem; --text-3xl: 2.074rem;
+  --text-display-s: 1.44rem; --text-display: 1.728rem; --text-section: 1.2rem; --text-title: 1rem; --text-lead: 1rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in: cubic-bezier(0.7, 0, 0.84, 0); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms; --dur-short: 220ms; --dur-long: 420ms;
+  --color-error: oklch(65% 0.17 27); --color-success: oklch(60% 0.13 150);
+  --container: 1280px; --gutter: 48px; --gap-columns: 32px; --section-gap-s: 120px; --section-gap: 144px; --section-gap-l: 176px;
+  --z-base: 1; --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
+  /* 暖夜墨:深夜值班室的桌面,不是屏幕黑 */
+  --color-paper: oklch(16% 0.015 70); --color-paper-2: oklch(20% 0.017 70); --color-paper-3: oklch(25% 0.02 70);
+  --color-ink: oklch(92% 0.02 85); --color-ink-2: oklch(84% 0.025 80); --color-muted: oklch(67% 0.028 75);
+  --color-rule: oklch(30% 0.02 70); --color-rule-2: oklch(42% 0.024 72);
+  --color-accent: oklch(80% 0.115 75); --color-accent-ink: oklch(17% 0.02 70); --color-focus: oklch(84% 0.13 80);
+  --font-display: "LXGW WenKai Screen", "Kaiti SC", "STKaiti", KaiTi, "TW-Kai", serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-outlier: ui-monospace, "Cascadia Mono", Consolas, "JetBrains Mono", monospace;
+  --radius-card: 12px; --radius-control: 8px; --radius-pill: 999px; --rule-hair: 1px;
+  --shadow-card: 0 16px 40px -20px oklch(6% 0.012 70 / 0.8);
+  --tracking-display: 0em; --display-weight: 400;
+  /* page tokens:台灯下的三件语义色与放映黑 */
+  --color-warn: oklch(74% 0.12 85);
+  --color-video-ground: oklch(9% 0.012 70);
+  --color-lamp: oklch(70% 0.075 75 / 0.13);
+}

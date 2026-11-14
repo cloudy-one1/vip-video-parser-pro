@@ -10,3 +10,6 @@ __pycache__/
 
 # Actions 每次运行才生成的产物(不入库)
 .github/badges/summary.md
+
+# Hallmark ????(??/??/??)
+.hallmark/
