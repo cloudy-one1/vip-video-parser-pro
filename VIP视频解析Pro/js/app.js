@@ -1067,9 +1067,21 @@
   pruneLineStats();
   renderAutoSwitch();
   // 解析页净化用户脚本（伴生组件）激活检测：脚本会在本站写入标记
+  const shieldActive = (() => {
+    try {
+      const shield = LS.get('vvpro.adShield', null);
+      if (shield && shield.v) { $('#shieldBadge').hidden = false; return true; }
+    } catch (e) { /* 忽略 */ }
+    return false;
+  })();
+  // 未装净化脚本且没关过提醒时，给出 AdGuard 安装引导（一键跳官方页）
   try {
-    const shield = LS.get('vvpro.adShield', null);
-    if (shield && shield.v) $('#shieldBadge').hidden = false;
+    const KEYS_HAS = 'vvpro.adguardHintDismissed';
+    if (!shieldActive && !LS.get(KEYS_HAS, false)) $('#adguardHint').hidden = false;
+    $('#adguardHintClose').addEventListener('click', () => {
+      $('#adguardHint').hidden = true;
+      LS.set(KEYS_HAS, true);
+    });
   } catch (e) { /* 忽略 */ }
   renderLines();
   renderHistory();

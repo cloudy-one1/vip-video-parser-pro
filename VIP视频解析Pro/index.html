@@ -53,6 +53,10 @@
         <button id="checkBtn" class="btn ghost small" type="button" title="在浏览器里快速探测各线路站点可达性（粗粒度）">体检</button>
         <button id="manageBtn" class="btn ghost small" type="button">管理线路</button>
         <span id="shieldBadge" class="shield-badge" hidden title="解析页净化脚本（Tampermonkey 伴生组件）已激活：消弹窗、拒通知、断广告、藏广告位">净化已启用</span>
+        <span id="adguardHint" class="adguard-hint" hidden>
+          <a href="https://adguard.com/zh_cn/adguard-browser-extension/extension.html" target="_blank" rel="noopener noreferrer" title="跳转 AdGuard 官方安装引导，自动识别浏览器与平台（含手机版）">增强防护：推荐装 AdGuard ↗</a>
+          <button id="adguardHintClose" type="button" title="不再提示">✕</button>
+        </span>
       </div>
 
       <!-- 线路管理面板 -->
@@ -94,7 +98,7 @@
           <button id="loadingSwitchBtn" class="btn primary small" type="button" hidden>换一条线路试试</button>
         </div>
       </div>
-      <p class="player-tip">沙箱开着，解析页里的弹窗和下载进不来。画面不行就点「这条不行」，它记仇 30 分钟，换线时自动绕开；任何「下载 / 允许通知 / 充值」字样都不是本站功能，请勿理会。</p>
+      <p class="player-tip">沙箱开着，解析页里的弹窗和下载进不来。画面不行就点「这条不行」，它记仇 30 分钟，换线时自动绕开；任何「下载 / 允许通知 / 充值」字样都不是本站功能，请勿理会。想釜底抽薪？装个 <a class="tip-link" href="https://adguard.com/zh_cn/adguard-browser-extension/extension.html" target="_blank" rel="noopener noreferrer">AdGuard 扩展</a>，广告在到达页面之前就被掐断（电脑一步、手机装 AdGuard App）。</p>
     </section>
 
     <!-- 观看记录 -->
