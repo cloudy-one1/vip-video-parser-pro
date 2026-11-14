@@ -127,12 +127,13 @@ python tools/line_checker.py --no-browser # 只走 HTTP 层快速体检（CI 同
 
 ## 解析页净化用户脚本（可选增强）
 
-安全沙箱只能从外面封住解析页的"弹窗/劫持/下载"，而**解析页内部的广告与骗点击元素**需要浏览器扩展级的权限才能净化。项目为此提供了一个伴生用户脚本 [`userscript/parse-ad-shield.user.js`](userscript/parse-ad-shield.user.js)：
+安全沙箱只能从外面封住解析页的"弹窗/劫持/下载"，而**解析页内部的广告与骗点击元素**需要浏览器扩展级的权限才能净化。项目为此提供了一个伴生用户脚本 [`userscript/parse-ad-shield.user.js`](userscript/parse-ad-shield.user.js)（v2，规则驱动的微型过滤引擎）：
 
-- **机制来源**：用 REA 对 AdGuard 扩展做了逆向分析，蒸馏其 scriptlet 引擎的分发机制与实战规则形态（`prevent-window-open`、`abort-on-property-read`、化妆品过滤等），代码为独立实现（MIT）；
-- **净化内容**：`window.open` 消弹窗（返回无害壳防崩溃）、Notification 权限自动拒绝（防"允许通知"钓鱼）、移除 meta refresh 跳转链、按已知广告域名关键词断供脚本/iframe、藏匿常见广告位、MutationObserver 拦动态注入的广告；
-- **与站内无缝联动**：脚本默认注入所有帧，所以**站内解析 iframe 里的解析页也会被净化**——这是静态站自身做不到、只有用户脚本能做到的事；脚本还会在本站写入激活标记，页面线路行会显示「🛡 净化已启用」徽标；
-- **覆盖范围**：11 条默认线路站点 + 无损云播放器域；只净化广告，不碰视频流。
+- **机制来源**：REA 深拆 AdGuard 扩展的过滤引擎（`tsurlfilter`/`agtree`，375+ 模块），蒸馏其 scriptlet 分发机制、别名表与实战规则形态；再用 Scrapling 对 11 条线路站做渲染级侦察（含带视频地址的播放页），确认广告在播放时动态注入、并发现 aibox 等壳站点的嵌套播放器域——两路证据共同驱动规则表；
+- **微型 scriptlet 引擎**：实现 9 个与 AdGuard/uBO 同名的脚本注入单元（`prevent-window-open`、`set-constant`、`abort-on-property-read`、`abort-current-inline-script`、`prevent-addEventListener`、`prevent-refresh`、`remove-class`、`remove-attr`、`hide-in-shadow-dom`）+ 广告资源断供（MutationObserver 动态拦截）+ 化妆品过滤；**规则用 AdGuard 兼容语法写在脚本内**（`域名##选择器` / `域名#$+js(...)`），以后补规则不改代码；
+- **嵌套覆盖**：`@match` 覆盖全部 11 条线路站 + 无损云播放器域 + aibox 的嵌套真播放器域（`1ljx.com`）——脚本默认注入所有帧，站内解析 iframe 里的每一层都被净化；
+- **与站内联动**：脚本在本站写入激活标记，页面线路行显示「🛡 净化已启用」徽标；
+- **诚实的边界**：无网络层拦截权限（那是扩展特权），对广告的打击面以"挂钩+断供+藏匿"为上限；统计类脚本（51.la 等）刻意不拦；不碰视频流。代码为独立 MIT 实现，未复制 GPL 代码。
 
 安装方法：装好 [Tampermonkey](https://www.tampermonkey.net/) 或 Violentmonkey 后，打开下面这个链接按提示安装即可（也可手动新建脚本粘贴全文）：
 
