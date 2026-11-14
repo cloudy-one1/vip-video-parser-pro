@@ -27,12 +27,21 @@
     <section class="card search-card">
       <div class="input-row">
         <div class="input-wrap" id="inputWrap">
-          <input type="text" id="urlInput" placeholder="粘贴视频播放页链接，如 https://v.qq.com/x/cover/..." autocomplete="off" spellcheck="false">
+          <input type="text" id="urlInput" placeholder="粘贴视频链接，或直接输入片名搜索" autocomplete="off" spellcheck="false">
           <span id="platformBadge" class="platform-badge" hidden></span>
         </div>
-        <button id="playBtn" class="btn primary" type="button">▶ 解析播放</button>
+        <button id="playBtn" class="btn primary" type="button" title="链接直接解析；纯文字当片名搜无损云">▶ 解析 / 搜索</button>
         <button id="pasteBtn" class="btn ghost" type="button" title="从剪贴板粘贴">粘贴</button>
         <button id="clearBtn" class="btn ghost" type="button" title="清空输入框 (Esc)">清空</button>
+      </div>
+
+      <!-- 无损云搜索面板：片名 → 候选 → 选集 → 直连播放 -->
+      <div id="searchPanel" class="search-panel" hidden>
+        <div class="search-panel-head">
+          <span id="searchPanelTitle">片名搜索 · 无损云</span>
+          <button id="searchPanelClose" class="btn ghost small" type="button" title="关闭 (Esc)">✕</button>
+        </div>
+        <div id="searchPanelBody" class="search-panel-body"></div>
       </div>
 
       <div class="lines-row">

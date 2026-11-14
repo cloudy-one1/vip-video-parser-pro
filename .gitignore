@@ -1,6 +1,7 @@
 # 系统与工具杂物
 Thumbs.db
 desktop.ini
+.zcode/
 
 # Python
 __pycache__/

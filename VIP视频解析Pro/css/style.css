@@ -347,6 +347,132 @@ body {
   font-size: 12px;
 }
 
+/* ========= 无损云搜索面板 ========= */
+.search-panel {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+}
+
+.search-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.search-panel-head span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--glow);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-panel-body {
+  max-height: 380px;
+  overflow-y: auto;
+}
+.search-panel-body::-webkit-scrollbar { width: 8px; }
+.search-panel-body::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+.cloud-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 0;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.spinner.small { width: 24px; height: 24px; border-width: 2px; }
+
+.cloud-msg {
+  padding: 18px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13.5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.cand-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+}
+
+.cand-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color var(--dur-s) var(--ease-out), transform 0.15s var(--ease-out);
+}
+.cand-card:hover { border-color: var(--glow); transform: translateY(-2px); }
+.cand-card:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+.cand-card img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: var(--radius-xs);
+  background: rgba(255, 255, 255, 0.04);
+}
+.cand-name {
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.ep-head { margin-bottom: 10px; }
+
+.ep-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 8px;
+}
+
+.ep-btn {
+  height: 36px;
+  padding: 0 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: border-color var(--dur-s) var(--ease-out), background var(--dur-s) var(--ease-out);
+}
+.ep-btn:hover { border-color: var(--glow); }
+.ep-btn:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+.ep-btn.on {
+  color: var(--on-accent);
+  font-weight: 600;
+  border-color: transparent;
+  background: var(--accent-grad);
+  box-shadow: 0 0 16px var(--glow-soft);
+}
+
 /* ========= 播放器（签名效果：呼吸微光） ========= */
 .player-card { padding: 14px; }
 
@@ -539,6 +665,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.hi-url.has-title { color: var(--text); }
 
 .hi-time {
   flex: 0 0 auto;

@@ -23,7 +23,9 @@
     history: 'vvpro.history',
     favFilter: 'vvpro.favFilter',
     autoSwitch: 'vvpro.autoSwitch',
-    failMemo: 'vvpro.failMemo'
+    failMemo: 'vvpro.failMemo',
+    cloudCache: 'vvpro.cloudCache',
+    proxyIdx: 'vvpro.proxyIdx'
   };
 
   const AUTO_SWITCH_MAX = 3;        // 加载超时后最多自动换线次数
@@ -56,6 +58,11 @@
   if (!failMemo || typeof failMemo !== 'object') failMemo = {};
   let historyQuery = '';
   let currentUrl = '';
+  let cloudCache = LS.get(KEYS.cloudCache, {});    // 无损云搜索缓存：{search:{kw:...}, detail:{id:...}}
+  if (!cloudCache || typeof cloudCache !== 'object') cloudCache = {};
+  if (!cloudCache.search) cloudCache.search = {};
+  if (!cloudCache.detail) cloudCache.detail = {};
+  let cloudProxyIdx = LS.get(KEYS.proxyIdx, 0) | 0;
 
   const saveLines = () => { LS.set(KEYS.lines, lines); LS.set(KEYS.active, activeLineId); };
   const saveHistory = () => LS.set(KEYS.history, history);
@@ -297,7 +304,7 @@
   function renderLineEditor() {
     const ul = $('#lineEditorList');
     ul.innerHTML = '';
-    lines.forEach(line => {
+    lines.forEach((line, i) => {
       const li = document.createElement('li');
       li.className = 'line-editor-item';
 
@@ -349,7 +356,33 @@
         toast('线路已删除');
       });
 
-      li.append(dot, nameI, prefixI, del);
+      // 排序：↑↓ 调整顺序，决定 Alt+1~9 与智能换线的优先级
+      const move = (dir) => {
+        const j = i + dir;
+        if (j < 0 || j >= lines.length) return;
+        const tmp = lines[i];
+        lines[i] = lines[j];
+        lines[j] = tmp;
+        saveLines();
+        renderLines();
+        renderLineEditor();
+      };
+      const upBtn = document.createElement('button');
+      upBtn.type = 'button';
+      upBtn.className = 'btn ghost small';
+      upBtn.textContent = '↑';
+      upBtn.title = '上移（排得越靠前，换线优先级越高）';
+      upBtn.disabled = i === 0;
+      upBtn.addEventListener('click', () => move(-1));
+      const downBtn = document.createElement('button');
+      downBtn.type = 'button';
+      downBtn.className = 'btn ghost small';
+      downBtn.textContent = '↓';
+      downBtn.title = '下移';
+      downBtn.disabled = i === lines.length - 1;
+      downBtn.addEventListener('click', () => move(1));
+
+      li.append(dot, nameI, prefixI, upBtn, downBtn, del);
       ul.appendChild(li);
     });
   }
@@ -376,7 +409,11 @@
     if (!line) { toast('没有可用线路，请先添加', 'error'); return; }
 
     currentUrl = url;
-    const parseUrl = buildParseUrl(line, url);
+    // m3u8 直连：粘贴 .m3u8 链接直接用无损云播放器播放，不走解析线路
+    const isM3u8 = /^https?:\/\/[^\s"'<>]+\.m3u8([?#]|$)/i.test(url);
+    const parseUrl = (isM3u8 && window.CLOUD)
+      ? window.CLOUD.PLAYER + encodeURIComponent(url)
+      : buildParseUrl(line, url);
 
     const section = $('#playerSection');
     const frame = $('#player');
@@ -386,7 +423,9 @@
 
     const platform = detectPlatform(url);
     const nowPlaying = $('#nowPlaying');
-    nowPlaying.textContent = (platform ? platform.name + ' · ' : '') + url;
+    nowPlaying.textContent = (isM3u8
+      ? (options.title ? options.title + ' · ' : 'm3u8直连 · ')
+      : platform ? platform.name + ' · ' : '') + url;
     nowPlaying.title = url;
 
     frame.src = parseUrl;
@@ -417,7 +456,10 @@
       $('#loadingSwitchBtn').hidden = false;
     }, 8000);
 
-    if (!options.skipHistory) addHistory(url, line);
+    if (!options.skipHistory) addHistory(url, isM3u8 ? null : line, {
+      platform: isM3u8 ? 'm3u8直连' : undefined,
+      title: options.title
+    });
     section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
@@ -438,18 +480,20 @@
   });
 
   /* ---------- 观看记录 ---------- */
-  function addHistory(url, line) {
+  function addHistory(url, line, meta) {
+    const options = meta || {};
     const existed = history.find(h => h.url === url);
     const fav = existed ? existed.fav : false;
     history = history.filter(h => h.url !== url);
     const platform = detectPlatform(url);
     history.unshift({
       url: url,
-      platform: platform ? platform.name : '其他',
+      platform: options.platform || (platform ? platform.name : '其他'),
       fav: fav,
       time: Date.now(),
       lineId: line ? line.id : null,     // 记住这条记录用的线路，重播时自动切回
-      lineName: line ? line.name : ''
+      lineName: line ? line.name : '',
+      title: options.title || ''         // 云端播放时记录「剧名 · 集名」
     });
     if (history.length > 50) history = history.slice(0, 50);
     saveHistory();
@@ -472,7 +516,7 @@
     const q = historyQuery.toLowerCase();
     const shown = history.filter(h =>
       (!filterFav || h.fav) &&
-      (!q || (h.url + ' ' + (h.platform || '')).toLowerCase().includes(q))
+      (!q || (h.url + ' ' + (h.platform || '') + ' ' + (h.title || '')).toLowerCase().includes(q))
     );
     const empty = $('#historyEmpty');
     empty.hidden = shown.length > 0;
@@ -502,8 +546,8 @@
       plat.className = 'hi-platform';
       plat.textContent = h.platform;
       const urlSpan = document.createElement('span');
-      urlSpan.className = 'hi-url';
-      urlSpan.textContent = h.url;
+      urlSpan.className = 'hi-url' + (h.title ? ' has-title' : '');
+      urlSpan.textContent = h.title || h.url;
       urlSpan.title = h.url;
       info.append(plat, urlSpan);
 
@@ -572,6 +616,235 @@
     });
   }
 
+  /* ---------- 无损云搜索（片名 → 候选 → 选集 → m3u8 直连） ----------
+   * 参考 88lin/video_vip 的「无损云解析」。资源库 API 无 CORS 头，
+   * 浏览器端经公共代理中转：尽力而为 + 多代理回退 + 结果本地缓存 + 失败降级。
+   */
+  const CLOUD = window.CLOUD || null;
+  let cloudState = { view: 'idle', kw: '', list: [], cand: null, candName: '', episodes: [], loading: false, error: '' };
+
+  function pruneCloudCache() {
+    if (!CLOUD) return;
+    const now = Date.now();
+    let dirty = false;
+    ['search', 'detail'].forEach(kind => {
+      const box = cloudCache[kind] || {};
+      Object.keys(box).forEach(k => {
+        if (!box[k] || (now - box[k].t) > CLOUD.CACHE_TTL) { delete box[k]; dirty = true; }
+      });
+    });
+    if (dirty) LS.set(KEYS.cloudCache, cloudCache);
+  }
+
+  function cloudCacheGet(kind, key) {
+    const hit = cloudCache[kind][key];
+    return hit && (Date.now() - hit.t) < CLOUD.CACHE_TTL ? hit.v : null;
+  }
+
+  function cloudCacheSet(kind, key, val) {
+    cloudCache[kind][key] = { t: Date.now(), v: val };
+    LS.set(KEYS.cloudCache, cloudCache);
+  }
+
+  async function cloudJson(apiUrl) {
+    const proxies = (CLOUD && CLOUD.PROXIES) || [];
+    if (!proxies.length) throw new Error('未配置搜索代理');
+    const start = ((cloudProxyIdx % proxies.length) + proxies.length) % proxies.length;
+    let lastErr = null;
+    for (let k = 0; k < proxies.length; k++) {
+      const i = (start + k) % proxies.length;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), CLOUD.TIMEOUT || 12000);
+      try {
+        const res = await fetch(proxies[i](apiUrl), { signal: ctrl.signal, cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = JSON.parse(await res.text());
+        cloudProxyIdx = i;              // 记住这次成功的代理，下次优先用它
+        LS.set(KEYS.proxyIdx, cloudProxyIdx);
+        return data;
+      } catch (e) {
+        lastErr = e;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    throw lastErr || new Error('代理全部不可用');
+  }
+
+  async function cloudSearch(kw) {
+    const cached = cloudCacheGet('search', kw);
+    if (cached) return cached;
+    const data = await cloudJson(CLOUD.SEARCH_API + encodeURIComponent(kw));
+    const list = (data.list || []).filter(x => x.id && x.name).slice(0, 12)
+      .map(x => ({ id: x.id, name: x.name, pic: x.pic || '' }));
+    if (list.length) cloudCacheSet('search', kw, list);
+    return list;
+  }
+
+  function parseEpisodes(playUrl) {
+    // 苹果CMS 格式：第1集$url1#第2集$url2…（无集名时整段就是链接）
+    return String(playUrl || '').split('#').map(seg => {
+      const p = seg.split('$');
+      return { name: (p[0] || '').trim() || '播放', url: (p[1] || p[0] || '').trim() };
+    }).filter(ep => /^https?:\/\//i.test(ep.url));
+  }
+
+  async function cloudDetail(id) {
+    const cached = cloudCacheGet('detail', String(id));
+    if (cached) return cached;
+    const data = await cloudJson(CLOUD.DETAIL_API + encodeURIComponent(id));
+    const v = (data.list || [])[0];
+    if (!v) throw new Error('未找到详情');
+    const out = {
+      name: v.vod_name || '',
+      remarks: v.vod_remarks || '',
+      episodes: parseEpisodes(v.vod_play_url)
+    };
+    if (out.episodes.length) cloudCacheSet('detail', String(id), out);
+    return out;
+  }
+
+  function setCloudState(patch) {
+    Object.assign(cloudState, patch);
+    renderSearchPanel();
+  }
+
+  async function openCloudSearch(kw) {
+    if (!CLOUD) { toast('云端搜索未配置', 'error'); return; }
+    $('#searchPanel').hidden = false;
+    setCloudState({ view: 'loading', kw: kw, list: [], cand: null, candName: '', episodes: [], loading: true, error: '', retryKind: 'search' });
+    try {
+      const list = await cloudSearch(kw);
+      if (cloudState.kw !== kw) return;   // 用户已改搜别的
+      setCloudState({ view: list.length ? 'candidates' : 'empty', list: list, loading: false });
+    } catch (e) {
+      if (cloudState.kw !== kw) return;
+      setCloudState({ view: 'error', loading: false, error: '搜索服务暂时不可用（公共代理波动），可稍后重试，或直接粘贴链接走解析线路' });
+    }
+  }
+
+  async function openCloudDetail(cand) {
+    setCloudState({ view: 'loading', cand: cand, candName: cand.name, loading: true, error: '', retryKind: 'detail' });
+    try {
+      const info = await cloudDetail(cand.id);
+      if (!cloudState.cand || cloudState.cand.id !== cand.id) return;
+      if (!info.episodes.length) {
+        setCloudState({ view: 'error', loading: false, error: '「' + info.name + '」暂无可播资源' });
+        return;
+      }
+      setCloudState({ view: 'episodes', episodes: info.episodes, candName: info.name || cand.name, loading: false });
+    } catch (e) {
+      if (!cloudState.cand || cloudState.cand.id !== cand.id) return;
+      setCloudState({ view: 'error', loading: false, error: '获取选集失败（代理波动），请重试' });
+    }
+  }
+
+  function playEpisode(ep) {
+    // 面板保持开着：换集不用重新搜索
+    play(ep.url, {
+      skipHistory: false,
+      title: (cloudState.candName || '') + ' · ' + ep.name
+    });
+    setCloudState({});   // 重新渲染选集网格，让当前集高亮跟上
+  }
+
+  function renderSearchPanel() {
+    const panel = $('#searchPanel');
+    if (panel.hidden) return;
+    const box = $('#searchPanelBody');
+    box.innerHTML = '';
+    const st = cloudState;
+
+    if (st.view === 'loading') {
+      const wrap = document.createElement('div');
+      wrap.className = 'cloud-loading';
+      const sp = document.createElement('div');
+      sp.className = 'spinner small';
+      const msg = document.createElement('p');
+      msg.textContent = st.cand ? '正在获取「' + st.candName + '」的选集…' : '正在搜索「' + st.kw + '」…';
+      wrap.append(sp, msg);
+      box.appendChild(wrap);
+      return;
+    }
+
+    if (st.view === 'error') {
+      const wrap = document.createElement('div');
+      wrap.className = 'cloud-msg';
+      const p = document.createElement('p');
+      p.textContent = st.error;
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'btn ghost small';
+      retry.textContent = '↻ 重试';
+      retry.addEventListener('click', () => {
+        if (st.retryKind === 'detail' && st.cand) openCloudDetail(st.cand);
+        else openCloudSearch(st.kw);
+      });
+      wrap.append(p, retry);
+      box.appendChild(wrap);
+      return;
+    }
+
+    if (st.view === 'empty') {
+      const wrap = document.createElement('div');
+      wrap.className = 'cloud-msg';
+      const p = document.createElement('p');
+      p.textContent = '资源库未收录「' + st.kw + '」，换个片名试试，或粘贴链接走解析线路。';
+      box.appendChild(wrap);
+      return;
+    }
+
+    if (st.view === 'candidates') {
+      $('#searchPanelTitle').textContent = '「' + st.kw + '」的搜索结果';
+      const grid = document.createElement('div');
+      grid.className = 'cand-grid';
+      st.list.forEach(cand => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'cand-card';
+        const img = document.createElement('img');
+        img.src = cand.pic;
+        img.alt = cand.name;
+        img.loading = 'lazy';
+        img.referrerPolicy = 'no-referrer';
+        const name = document.createElement('span');
+        name.className = 'cand-name';
+        name.textContent = cand.name;
+        name.title = cand.name;
+        card.append(img, name);
+        card.addEventListener('click', () => openCloudDetail(cand));
+        grid.appendChild(card);
+      });
+      box.appendChild(grid);
+      return;
+    }
+
+    if (st.view === 'episodes') {
+      $('#searchPanelTitle').textContent = st.candName + ' · 共 ' + st.episodes.length + ' 集';
+      const head = document.createElement('div');
+      head.className = 'ep-head';
+      const back = document.createElement('button');
+      back.type = 'button';
+      back.className = 'btn ghost small';
+      back.textContent = '← 返回候选';
+      back.addEventListener('click', () => setCloudState({ view: 'candidates', cand: null }));
+      head.appendChild(back);
+      box.appendChild(head);
+      const grid = document.createElement('div');
+      grid.className = 'ep-grid';
+      st.episodes.forEach(ep => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ep-btn' + (ep.url === currentUrl ? ' on' : '');
+        btn.textContent = ep.name;
+        btn.title = ep.url;
+        btn.addEventListener('click', () => playEpisode(ep));
+        grid.appendChild(btn);
+      });
+      box.appendChild(grid);
+    }
+  }
+
   /* ---------- 平台徽标 ---------- */
   function updateBadge() {
     const badge = $('#platformBadge');
@@ -589,21 +862,31 @@
   }
 
   /* ---------- 事件绑定 ---------- */
+  // 双模式提交：像链接就走解析，否则当片名搜无损云
+  function submitInput() {
+    const raw = $('#urlInput').value.trim();
+    if (raw && !normalizeUrl(raw)) openCloudSearch(raw);
+    else play(raw);
+  }
+
   $('#urlInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') play($('#urlInput').value);
+    if (e.key === 'Enter') submitInput();
     else if (e.key === 'Escape') { $('#urlInput').value = ''; updateBadge(); }
   });
   $('#urlInput').addEventListener('input', updateBadge);
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !$('#linePanel').hidden) $('#linePanel').hidden = true;
+    if (e.key === 'Escape') {
+      if (!$('#searchPanel').hidden) { $('#searchPanel').hidden = true; return; }
+      if (!$('#linePanel').hidden) $('#linePanel').hidden = true;
+    }
     if (e.altKey && /^[1-9]$/.test(e.key)) {
       const line = lines[+e.key - 1];
       if (line) { selectLine(line.id); e.preventDefault(); }
     }
   });
 
-  $('#playBtn').addEventListener('click', () => play($('#urlInput').value));
+  $('#playBtn').addEventListener('click', submitInput);
 
   $('#clearBtn').addEventListener('click', () => {
     $('#urlInput').value = '';
@@ -681,6 +964,10 @@
     if (currentUrl) play(currentUrl, { skipHistory: true });
   });
 
+  $('#searchPanelClose').addEventListener('click', () => {
+    $('#searchPanel').hidden = true;
+  });
+
   $('#newTabBtn').addEventListener('click', () => {
     const href = $('#newTabBtn').dataset.href;
     if (href) window.open(href, '_blank', 'noopener');
@@ -710,6 +997,7 @@
   /* ---------- 初始化 ---------- */
   $('#favFilter').checked = filterFav;
   pruneFailMemo();
+  pruneCloudCache();
   renderAutoSwitch();
   renderLines();
   renderHistory();
