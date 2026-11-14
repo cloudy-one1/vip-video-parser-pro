@@ -14,7 +14,6 @@
 .
 ├── VIP视频解析Pro/          重构版主项目（日常使用这个）
 ├── .github/workflows/       线路自动体检（GitHub Actions cron）
-├── VIP视频解析v1.0.2.html   原版单文件，留作对照
 └── README.md
 ```
 
@@ -128,8 +127,7 @@ VIP视频解析Pro/
 ├── js/app.js            主逻辑（解析、无损云搜索、历史、收藏、线路管理、状态徽标、智能换线）
 ├── js/lines-status.js   线路状态快照（tools/line_checker.py 生成，可随时重跑）
 ├── js/lines-status.json 同上，http 部署时 fetch 读取
-├── tools/line_checker.py  Scrapling 线路体检工具链
-└── .ui-style-options/   ui-style-system 风格方案存档（可忽略）
+└── tools/line_checker.py  Scrapling 线路体检工具链
 ```
 
 ## 免责声明
