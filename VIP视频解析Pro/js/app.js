@@ -1248,7 +1248,7 @@
       'border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none}',
       '.vvgate-btn.ghost{background:transparent;color:#9aa3b2;border:1px solid #2a323d;font-weight:500}',
       '.vvgate-msg{min-height:18px;margin-top:6px;font-size:12px;color:#f87171}',
-      '.vvgate-card a{color:#2dd4bf}'
+      '.vvgate-card p a{color:#2dd4bf}'
     ].join('');
     document.head.appendChild(style);
 
@@ -1258,11 +1258,10 @@
     gate.innerHTML =
       '<div class="vvgate-card">' +
       '<h2>🛡️ 本站需要开启广告拦截</h2>' +
-      '<p>解析站的播放页会<span class="hi">动态注入广告与弹窗</span>（本站曾实测到成人广告插页）。' +
-      '为保护使用安全，请先安装 <a href="' + installUrl + '" target="_blank" rel="noopener">AdGuard 扩展 ↗</a>' +
+      '<p>解析站的播放页会<span class="hi">动态注入广告与弹窗</span>，影响使用安全。' +
+      '请先安装 <a href="' + installUrl + '" target="_blank" rel="noopener">AdGuard 扩展 ↗</a>' +
       '（免费；uBlock Origin 等同类拦截器同样有效）。</p>' +
-      '<p>装好后回到本页点「重新检测」即可进入。检测原理：投放一个广告样式的诱饵元素，' +
-      '看它是否被拦截规则隐藏。</p>' +
+      '<p>装好后回到本页点「重新检测」即可进入。</p>' +
       '<div class="vvgate-actions">' +
       '<a class="vvgate-btn" href="' + installUrl + '" target="_blank" rel="noopener">安装 AdGuard ↗</a>' +
       '<button type="button" class="vvgate-btn ghost" id="vvgateRetry">我已装好 · 重新检测</button>' +
