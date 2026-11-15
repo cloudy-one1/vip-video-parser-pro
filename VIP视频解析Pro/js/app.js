@@ -1306,7 +1306,7 @@
   const adguardInstallUrl = () => {
     const ua = navigator.userAgent;
     if (/iPhone|iPad|iPod/i.test(ua)) return 'https://apps.apple.com/app/id1047223162';
-    if (/Edg\//.test(ua)) return 'https://microsoftedge.microsoft.com/addons/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl';
+    if (/Edg\//.test(ua)) return 'https://microsoftedge.microsoft.com/addons/detail/adguard-%E5%B9%BF%E5%91%8A%E6%8B%A6%E6%88%AA%E5%99%A8/pdffkfellgipmhklpdmokmckkkfcopbh';
     if (/Chrome\//.test(ua) && !/Edg\//.test(ua)) return 'https://chromewebstore.google.com/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl';
     return 'https://adguard.com/zh_cn/adguard-browser-extension/extension.html';
   };
