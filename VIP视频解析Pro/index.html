@@ -17,7 +17,7 @@
         <span class="logo-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
         <div class="logo-text">
           <h1>VIP 视频解析 Pro</h1>
-          <p>贴上链接，选条线路，当场看</p>
+          <p>贴链接解析，搜片名云播，当场看</p>
         </div>
       </div>
       <p id="statusSummary" class="status-summary" hidden></p>
@@ -29,13 +29,21 @@
     <!-- 解析入口 -->
     <section class="card search-card">
       <div class="input-row">
+        <span class="mode-tag" title="贴官方播放页链接，走解析线路">解析</span>
         <div class="input-wrap" id="inputWrap">
-          <input type="text" id="urlInput" placeholder="粘贴视频链接，或直接输入片名搜索" autocomplete="off" spellcheck="false">
+          <input type="text" id="urlInput" placeholder="粘贴视频链接（腾讯 / 爱奇艺 / 优酷…）" autocomplete="off" spellcheck="false">
           <span id="platformBadge" class="platform-badge" hidden></span>
         </div>
-        <button id="playBtn" class="btn primary" type="button" title="链接直接解析；纯文字当片名搜无损云">解析 / 搜索</button>
+        <button id="playBtn" class="btn primary" type="button" title="把链接交给当前解析线路播放">解析播放</button>
         <button id="pasteBtn" class="btn ghost" type="button" title="从剪贴板粘贴">粘贴</button>
         <button id="clearBtn" class="btn ghost" type="button" title="清空输入框 (Esc)">清空</button>
+      </div>
+      <div class="input-row cloud-row">
+        <span class="mode-tag cloud" title="搜片名，从无损云资源库直接播放">云播</span>
+        <div class="input-wrap">
+          <input type="text" id="cloudInput" placeholder="搜片名，如：琅琊榜（自家播放器 · 稳定无广告）" autocomplete="off" spellcheck="false">
+        </div>
+        <button id="cloudSearchBtn" class="btn primary" type="button" title="从无损云资源库搜索并播放；新上线的爆款可能搜不到">云播放</button>
       </div>
 
       <!-- 无损云搜索面板：片名 → 候选 → 选集 → 直连播放 -->

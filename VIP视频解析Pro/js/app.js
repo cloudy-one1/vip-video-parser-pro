@@ -1116,6 +1116,19 @@
     else play(raw);
   }
 
+  // 云播放独立入口：搜片名直接走无损云（误粘了链接则顺手转解析播放）
+  function submitCloud() {
+    const raw = $('#cloudInput').value.trim();
+    if (!raw) { toast('输入片名再搜，如：琅琊榜', 'error'); $('#cloudInput').focus(); return; }
+    if (normalizeUrl(raw)) { play(raw); return; }
+    openCloudSearch(raw);
+  }
+  $('#cloudSearchBtn').addEventListener('click', submitCloud);
+  $('#cloudInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitCloud();
+    else if (e.key === 'Escape') $('#cloudInput').value = '';
+  });
+
   $('#urlInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') submitInput();
     else if (e.key === 'Escape') { $('#urlInput').value = ''; updateBadge(); }
