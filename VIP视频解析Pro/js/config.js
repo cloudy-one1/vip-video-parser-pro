@@ -37,10 +37,31 @@ window.REMOVED_DEFAULT_LINES = {
 /* ========= 无损云搜索配置 =========
  * 片名搜索 → 候选 → 选集 → m3u8 直连，参考 88lin/video_vip 的「无损云解析」。
  * 资源库 API 无 CORS 头，浏览器端经公共代理中转（尽力而为，失败自动降级）。
+ *
+ * 资源源聚合：候选卡同名去重（源顺序即优先级），单源失败不影响其余源。
+ * protocol:
+ *  - 'cms'     标准苹果CMS：search(?ac=detail&wd=) 一次带回详情（含 vod_play_url），
+ *              搜索时顺手把详情种进缓存，点击候选零等待；
+ *  - 'suggest' 无忧专用：suggest 搜索只回 id/name/pic，详情点击时再走 detail&ids=。
+ * 候选源 2026-11-15 实测（curl 直连，狂飙/繁花双探针）：非凡（狂飙77集+繁花59集）/
+ * 暴风（狂飙39集）/360（繁花30集）补齐无忧片库缺口；量子 SSL 断连、卧龙/天空返回非
+ * JSON、极速/红牛无正主命中，均未入选。覆盖缺口见 README 云搜索说明。
  */
 window.CLOUD = {
-  SEARCH_API: 'https://wsyzy.cc/index.php/ajax/suggest?mid=1&wd=',
-  DETAIL_API: 'https://api.wsyzy.net/api.php/provide/vod/?ac=detail&ids=',
+  SOURCES: [
+    { id: 'ffzy',  name: '非凡', protocol: 'cms',
+      search: 'https://api.ffzyapi.com/api.php/provide/vod/?ac=detail&wd=',
+      detail: 'https://api.ffzyapi.com/api.php/provide/vod/?ac=detail&ids=' },
+    { id: 'bfzy',  name: '暴风', protocol: 'cms',
+      search: 'https://bfzyapi.com/api.php/provide/vod/?ac=detail&wd=',
+      detail: 'https://bfzyapi.com/api.php/provide/vod/?ac=detail&ids=' },
+    { id: 'zy360', name: '360',  protocol: 'cms',
+      search: 'https://360zy5.com/api.php/provide/vod/?ac=detail&wd=',
+      detail: 'https://360zy5.com/api.php/provide/vod/?ac=detail&ids=' },
+    { id: 'wsyzy', name: '无忧', protocol: 'suggest',
+      search: 'https://wsyzy.cc/index.php/ajax/suggest?mid=1&wd=',
+      detail: 'https://api.wsyzy.net/api.php/provide/vod/?ac=detail&ids=' }
+  ],
   PLAYER: 'player.html?src=',                       /* 自建 hls.js 播放器(零第三方页面) */
   PLAYER_REMOTE: 'https://wsyzy.vip/m3u8/?url=',    /* 官方回退:自建播放器失败时在 player.html 内可一键切换 */
   /* 代理链：按序尝试，成功者记入 localStorage 下次优先 */

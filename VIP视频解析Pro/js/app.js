@@ -892,10 +892,38 @@
   async function cloudSearch(kw) {
     const cached = cloudCacheGet('search', kw);
     if (cached) return cached;
-    const data = await cloudJson(CLOUD.SEARCH_API + encodeURIComponent(kw));
-    // 取 24 条留足排序余地：正主可能被蹭名短剧挤到 12 名开外，截断必须放在排序之后
-    const list = (data.list || []).filter(x => x.id && x.name).slice(0, 24)
-      .map(x => ({ id: x.id, name: x.name, pic: x.pic || '' }));
+    const q = encodeURIComponent(kw);
+    // 并行扇出全部源：单源失败（代理波动/站点死亡）只损失它的结果，不拖垮整体
+    const results = await Promise.allSettled(CLOUD.SOURCES.map(async src => {
+      const data = await cloudJson(src.search + q);
+      if (src.protocol === 'suggest') {
+        // 无忧：suggest 只回 id/name/pic，详情点击时再取
+        return (data.list || []).filter(x => x.id && x.name).slice(0, 24)
+          .map(x => ({ id: String(x.id), name: x.name, pic: x.pic || '', src: src.id }));
+      }
+      // cms：wd 搜索直接带回详情，顺手种进详情缓存，点击候选零等待
+      const items = (data.list || []).filter(x => x.vod_id && x.vod_name).slice(0, 24);
+      items.forEach(x => {
+        const eps = parseEpisodes(x.vod_play_url);
+        if (eps.length) cloudCacheSet('detail', src.id + ':' + x.vod_id, {
+          name: x.vod_name || '',
+          remarks: x.vod_remarks || '',
+          episodes: eps
+        });
+      });
+      return items.map(x => ({ id: String(x.vod_id), name: x.vod_name, pic: x.vod_pic || '', src: src.id }));
+    }));
+    const list = [];
+    const seen = new Set();   // 同名去重：多源同片只留优先靠前的源（SOURCES 顺序即优先级）
+    for (const r of results) {
+      if (r.status !== 'fulfilled') continue;
+      for (const item of r.value) {
+        const key = item.name.replace(/\s+/g, '');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        list.push(item);
+      }
+    }
     if (list.length) cloudCacheSet('search', kw, list);
     return list;
   }
@@ -923,17 +951,35 @@
   }
 
   function parseEpisodes(playUrl) {
-    // 苹果CMS 格式：第1集$url1#第2集$url2…（无集名时整段就是链接）
-    return String(playUrl || '').split('#').map(seg => {
-      const p = seg.split('$');
-      return { name: (p[0] || '').trim() || '播放', url: (p[1] || p[0] || '').trim() };
-    }).filter(ep => /^https?:\/\//i.test(ep.url));
+    // 苹果CMS 格式：多播放组以 $$$ 分隔（同源常带 share页组 + m3u8 直链组两组），
+    // 组内 第1集$url1#第2集$url2…。自家播放器只吃 m3u8 直链，
+    // 所以优先选 m3u8 直链最多的组；都不含时退回集数最多的组。
+    let best = null;
+    String(playUrl || '').split('$$$').forEach(g => {
+      const eps = g.split('#').map(seg => {
+        const p = seg.split('$');
+        return { name: (p[0] || '').trim() || '播放', url: (p[1] || p[0] || '').trim() };
+      }).filter(ep => /^https?:\/\//i.test(ep.url));
+      if (!eps.length) return;
+      const m3u8n = eps.filter(ep => /\.m3u8([?#]|$)/i.test(ep.url)).length;
+      if (!best || m3u8n > best.m3u8n || (m3u8n === best.m3u8n && eps.length > best.eps.length)) {
+        best = { m3u8n: m3u8n, eps: eps };
+      }
+    });
+    return best ? best.eps : [];
   }
 
-  async function cloudDetail(id) {
-    const cached = cloudCacheGet('detail', String(id));
+  /* 候选唯一键：多源下 id 可能撞号（各家 vod_id 独立体系），加源前缀 */
+  function candKey(cand) {
+    return (cand.src || 'wsyzy') + ':' + cand.id;
+  }
+
+  async function cloudDetail(cand) {
+    const key = candKey(cand);
+    const cached = cloudCacheGet('detail', key);
     if (cached) return cached;
-    const data = await cloudJson(CLOUD.DETAIL_API + encodeURIComponent(id));
+    const src = CLOUD.SOURCES.find(s => s.id === (cand.src || 'wsyzy')) || CLOUD.SOURCES[0];
+    const data = await cloudJson(src.detail + encodeURIComponent(cand.id));
     const v = (data.list || [])[0];
     if (!v) throw new Error('未找到详情');
     const out = {
@@ -941,7 +987,7 @@
       remarks: v.vod_remarks || '',
       episodes: parseEpisodes(v.vod_play_url)
     };
-    if (out.episodes.length) cloudCacheSet('detail', String(id), out);
+    if (out.episodes.length) cloudCacheSet('detail', key, out);
     return out;
   }
 
@@ -967,15 +1013,15 @@
   async function openCloudDetail(cand) {
     setCloudState({ view: 'loading', cand: cand, candName: cand.name, loading: true, error: '', retryKind: 'detail' });
     try {
-      const info = await cloudDetail(cand.id);
-      if (!cloudState.cand || cloudState.cand.id !== cand.id) return;
+      const info = await cloudDetail(cand);
+      if (!cloudState.cand || candKey(cloudState.cand) !== candKey(cand)) return;
       if (!info.episodes.length) {
         setCloudState({ view: 'error', loading: false, error: '「' + info.name + '」暂无可播资源' });
         return;
       }
       setCloudState({ view: 'episodes', episodes: info.episodes, candName: info.name || cand.name, loading: false });
     } catch (e) {
-      if (!cloudState.cand || cloudState.cand.id !== cand.id) return;
+      if (!cloudState.cand || candKey(cloudState.cand) !== candKey(cand)) return;
       setCloudState({ view: 'error', loading: false, error: '获取选集失败（代理波动），请重试' });
     }
   }
@@ -1030,7 +1076,7 @@
       const wrap = document.createElement('div');
       wrap.className = 'cloud-msg';
       const p = document.createElement('p');
-      p.textContent = '资源库未收录「' + st.kw + '」，换个片名试试，或粘贴链接走解析线路。';
+      p.textContent = '各资源库均未收录「' + st.kw + '」，换个片名试试，或粘贴链接走解析线路。';
       box.appendChild(wrap);
       return;
     }
@@ -1058,6 +1104,13 @@
           tag.className = 'cand-tag';
           tag.textContent = '正主';
           card.appendChild(tag);
+        }
+        const srcName = ((CLOUD.SOURCES || []).find(s => s.id === cand.src) || {}).name || '';
+        if (srcName) {
+          const srcChip = document.createElement('span');
+          srcChip.className = 'cand-src';
+          srcChip.textContent = srcName;
+          card.appendChild(srcChip);
         }
         card.addEventListener('click', () => openCloudDetail(cand));
         grid.appendChild(card);

@@ -407,6 +407,19 @@ main { animation: settle var(--dur-long) var(--ease-out) both; }
   font-size: 10px;
   letter-spacing: 2px;
 }
+/* 来源角标：右上角，标这条候选来自哪个资源库（深底半透明，任何海报上可读） */
+.cand-src {
+  position: absolute;
+  top: calc(var(--space-2xs) + 5px);
+  right: calc(var(--space-2xs) + 5px);
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(10, 14, 18, 0.72);
+  color: #cfd6df;
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
 .cand-name {
   font-size: var(--text-xs);
   color: var(--color-ink);
