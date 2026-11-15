@@ -7,6 +7,12 @@
  *
  * 除名记录：
  *  - bd.jx.cn（BD解析）：2026-11-14 播放页实测出现成人广告插页，内容政策除名。
+ *  - jx.aidouer.net（爱豆）/ jx.hls.one（HLS）：2026-11-15 上游指纹分析发现两站同上游，
+ *    且均已发布告别页（「江湖路远，后会无期」）服务关停，除名。
+ *
+ * 2026-11-15 增补：来源 yinghezhinan.com 解析接口合集 + 88lin/video_vip，
+ * 9 条候选经 line_checker 深度体检，FongMi 入选（七哥×2 为 Cloudflare 质询拦截、
+ * 937/花旗/Ai超级/RdfPlayer 连接失败，均未入选；HLS解析同日入选又因上述告别页除名）。
  */
 window.DEFAULT_LINES = [
   { id: 'lxyy',       name: 'LXYY解析',  prefix: 'https://jx.lxyy.club/index.php?url=' },
@@ -15,15 +21,17 @@ window.DEFAULT_LINES = [
   { id: 'im1907',     name: 'IM1907',    prefix: 'https://im1907.top/?jx=' },
   { id: 'yemu',       name: '夜幕解析',   prefix: 'https://www.yemu.xyz/?url=' },
   { id: '8090g',      name: '8090解析',  prefix: 'https://www.8090g.cn/?url=' },
-  { id: 'aidouer',    name: '爱豆解析',   prefix: 'https://jx.aidouer.net/?url=' },
   { id: 'txnp',       name: 'TXNQ解析',  prefix: 'https://bfq.txnp.cn/player?url=' },
   { id: 'jx789',      name: '789解析',   prefix: 'https://jiexi.789jiexi.com/?url=' },
-  { id: 'okjx',       name: 'OK解析',    prefix: 'https://okjx.cc/?url=' }
+  { id: 'okjx',       name: 'OK解析',    prefix: 'https://okjx.cc/?url=' },
+  { id: 'fongmi',     name: 'FongMi',    prefix: 'https://json.fongmi.cc/web?url=' }
 ];
 
-/* 内容政策除名的默认线路：app.js 会在加载时自动清掉「未被用户改动过」的这些线 */
+/* 已除名的默认线路（内容政策/服务关停）：app.js 会在加载时自动清掉「未被用户改动过」的这些线 */
 window.REMOVED_DEFAULT_LINES = {
-  bdjx: 'https://bd.jx.cn/?url='
+  bdjx: 'https://bd.jx.cn/?url=',
+  aidouer: 'https://jx.aidouer.net/?url=',
+  hlsone: 'https://jx.hls.one/?url='
 };
 
 /* ========= 无损云搜索配置 =========
@@ -44,6 +52,16 @@ window.CLOUD = {
   ],
   CACHE_TTL: 6 * 3600e3,   // 搜索/详情缓存 6 小时
   TIMEOUT: 12000
+};
+
+/* ========= 本地网关(可选增强) =========
+ * python tools/gateway.py 起的本机服务:分钟级线路体检 + 播放前预检 + 失败回报。
+ * 页面打开后每分钟自动探测,网关在线即接入;不在时一切照旧,零依赖。
+ * 换端口时同步改这里的 base。
+ */
+window.GATEWAY = {
+  enabled: true,
+  base: 'http://127.0.0.1:8787'
 };
 
 /* ========= 平台识别规则 =========

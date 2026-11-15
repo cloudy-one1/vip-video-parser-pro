@@ -59,6 +59,10 @@ PARKING_KEYWORDS = [
     "domain for sale", "domain is for sale", "buy this domain",
     "parked", "expired domain", "account suspended",
 ]
+# 站长主动关停的告别页特征(2026-11-15 实测:爱豆/HLS 同款告别页,页面 200 但服务已停)
+FAREWELL_MARKERS = [
+    "后会无期", "此去一别", "江湖路远", "不再相逢", "望君珍重",
+]
 
 
 def parse_config_lines(config_path: Path):
@@ -116,6 +120,11 @@ def classify(code, title, text, final_url, home):
     if 200 <= code < 400:
         if any(k in low for k in PARKING_KEYWORDS):
             return "down", "疑似停放/过期页面"
+        # 页面可达 ≠ 服务可用:告别页/空壳跳转页都渲染正常,但不再解析
+        if any(k in low for k in FAREWELL_MARKERS):
+            return "down", "站点已发布告别页(服务关停)"
+        if "redirecting" in low and len((text or "").strip()) <= 60:
+            return "down", "空壳跳转页(疑似域名停放/易主)"
         if registrable(final_host) != registrable(home_host):
             return "down", f"跳转到其他站点({final_host})"
         return "up", ""

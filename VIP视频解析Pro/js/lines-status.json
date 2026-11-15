@@ -1,64 +1,14 @@
 {
-  "checkedAt": "2026-11-14T14:27:41+00:00",
+  "checkedAt": "2026-11-15T11:53:07+08:00",
   "tool": "line_checker/1.2",
   "lines": {
-    "maccms": {
-      "homepage": "https://free.maccms.xyz/",
-      "status": "up",
-      "code": 200,
-      "ms": 555,
-      "title": "麒麟视频播放器",
-      "finalUrl": "https://free.maccms.xyz/",
-      "note": "",
-      "via": "http"
-    },
-    "yemu": {
-      "homepage": "https://www.yemu.xyz/",
-      "status": "up",
-      "code": 200,
-      "ms": 1111,
-      "title": "十八码 - 苹果CMS模板插件与WEB播放器整合使用经验交流社区",
-      "finalUrl": "https://www.yemu.xyz/",
-      "note": "",
-      "via": "http"
-    },
     "im1907": {
       "homepage": "https://im1907.top/",
       "status": "up",
       "code": 200,
-      "ms": 1253,
+      "ms": 1844,
       "title": "M1907 云加速播放器 - 演示版",
       "finalUrl": "https://im1907.top/",
-      "note": "",
-      "via": "http"
-    },
-    "lxyy": {
-      "homepage": "https://jx.lxyy.club/",
-      "status": "up",
-      "code": 200,
-      "ms": 1308,
-      "title": "Lx解析播放器",
-      "finalUrl": "https://jx.lxyy.club/index.php?url=",
-      "note": "",
-      "via": "http"
-    },
-    "aidouer": {
-      "homepage": "https://jx.aidouer.net/",
-      "status": "up",
-      "code": 200,
-      "ms": 1380,
-      "title": "江湖路远，后会无期",
-      "finalUrl": "https://jx.aidouer.net/",
-      "note": "",
-      "via": "http"
-    },
-    "txnp": {
-      "homepage": "https://bfq.txnp.cn/",
-      "status": "up",
-      "code": 200,
-      "ms": 2199,
-      "title": "弹幕播放器",
-      "finalUrl": "https://art.txnp.cn/",
       "note": "",
       "via": "http"
     },
@@ -66,9 +16,59 @@
       "homepage": "https://www.8090g.cn/",
       "status": "up",
       "code": 200,
-      "ms": 2392,
-      "title": "���ѵ��޹�������!��-�����ڲ�ѧϰ����ʹ�ã�������ȥ���⹫��ʹ�ã����ɵ�һ�����α�վ�Ų��������������������㣬���ǻ�ɾ����",
+      "ms": 1973,
+      "title": "",
       "finalUrl": "https://www.8090g.cn/",
+      "note": "",
+      "via": "http"
+    },
+    "yemu": {
+      "homepage": "https://www.yemu.xyz/",
+      "status": "up",
+      "code": 200,
+      "ms": 1982,
+      "title": "十八码 - 苹果CMS模板插件与WEB播放器整合使用经验交流社区",
+      "finalUrl": "https://www.yemu.xyz/",
+      "note": "",
+      "via": "http"
+    },
+    "lxyy": {
+      "homepage": "https://jx.lxyy.club/",
+      "status": "up",
+      "code": 200,
+      "ms": 2355,
+      "title": "Lx解析播放器",
+      "finalUrl": "https://jx.lxyy.club/index.php?url=",
+      "note": "",
+      "via": "http"
+    },
+    "txnp": {
+      "homepage": "https://bfq.txnp.cn/",
+      "status": "up",
+      "code": 200,
+      "ms": 2672,
+      "title": "弹幕播放器",
+      "finalUrl": "https://art.txnp.cn/",
+      "note": "",
+      "via": "http"
+    },
+    "jx789": {
+      "homepage": "https://jiexi.789jiexi.com/",
+      "status": "up",
+      "code": 200,
+      "ms": 3611,
+      "title": "",
+      "finalUrl": "https://jiexi.789jiexi.com/",
+      "note": "",
+      "via": "http"
+    },
+    "maccms": {
+      "homepage": "https://free.maccms.xyz/",
+      "status": "up",
+      "code": 200,
+      "ms": 4145,
+      "title": "麒麟视频播放器",
+      "finalUrl": "https://free.maccms.xyz/",
       "note": "",
       "via": "http"
     },
@@ -76,31 +76,31 @@
       "homepage": "https://aibox.eu.org/",
       "status": "up",
       "code": 200,
-      "ms": 2403,
+      "ms": 5832,
       "title": "臻享视听 - 让娱乐体验栩栩如生",
       "finalUrl": "https://aibox.eu.org/",
       "note": "",
       "via": "http"
     },
+    "fongmi": {
+      "homepage": "https://json.fongmi.cc/",
+      "status": "down",
+      "code": 200,
+      "ms": 3619,
+      "title": "Redirecting...",
+      "finalUrl": "https://json.fongmi.cc/",
+      "note": "空壳跳转页(疑似域名停放/易主)",
+      "via": "browser"
+    },
     "okjx": {
       "homepage": "https://okjx.cc/",
       "status": "down",
-      "code": null,
-      "ms": 2167,
-      "title": "",
-      "finalUrl": "https://okjx.cc/",
-      "note": "连接失败(超时/DNS/拒连)",
-      "via": "http"
-    },
-    "jx789": {
-      "homepage": "https://jiexi.789jiexi.com/",
-      "status": "up",
       "code": 200,
-      "ms": 4045,
-      "title": "",
-      "finalUrl": "https://jiexi.789jiexi.com/",
-      "note": "",
-      "via": "http"
+      "ms": 3192,
+      "title": "Redirecting...",
+      "finalUrl": "https://okjx.cc/",
+      "note": "空壳跳转页(疑似域名停放/易主)",
+      "via": "browser"
     }
   }
 }

@@ -19,6 +19,7 @@
 
   const KEYS = {
     lines: 'vvpro.lines',
+    linesVer: 'vvpro.linesVer',
     active: 'vvpro.activeLine',
     history: 'vvpro.history',
     favFilter: 'vvpro.favFilter',
@@ -56,6 +57,20 @@
     }
   }
   if (!lines.length) lines = window.DEFAULT_LINES.map(l => Object.assign({}, l));
+  // 默认线路版本升级：增量合并新增线路到存量设备（v2 = 2026-11-15 增补 HLS解析/FongMi）。
+  // 存量设备升级前删掉的默认线会被补回一次；不想要的话在编辑器里再删一次即可。
+  const LINES_VERSION = 2;
+  if ((LS.get(KEYS.linesVer, 0) | 0) < LINES_VERSION) {
+    let merged = false;
+    window.DEFAULT_LINES.forEach(d => {
+      if (!lines.some(l => l.id === d.id || l.prefix === d.prefix)) {
+        lines.push(Object.assign({}, d));
+        merged = true;
+      }
+    });
+    LS.set(KEYS.linesVer, LINES_VERSION);
+    if (merged) LS.set(KEYS.lines, lines);
+  }
   let activeLineId = LS.get(KEYS.active, null);
   if (!lines.some(l => l.id === activeLineId)) activeLineId = lines[0].id;
 
@@ -73,8 +88,21 @@
   if (!cloudCache.search) cloudCache.search = {};
   if (!cloudCache.detail) cloudCache.detail = {};
   let cloudProxyIdx = LS.get(KEYS.proxyIdx, 0) | 0;
-  let lineStats = LS.get(KEYS.lineStats, {});      // 线路长期质量: id -> {ok, fail}
+  let lineStats = LS.get(KEYS.lineStats, {});      // 线路长期质量: id -> {all:{ok,fail}, 平台名:{ok,fail}}
   if (!lineStats || typeof lineStats !== 'object') lineStats = {};
+  // 旧格式迁移：{ok,fail} -> {all:{ok,fail}}（2026-11-15 引入平台维度）；保留可能存在的平台键，立即落盘
+  Object.keys(lineStats).forEach(id => {
+    const rec = lineStats[id];
+    if (rec && typeof rec === 'object' && !rec.all && typeof rec.ok !== 'undefined') {
+      const next = Object.assign({}, rec, { all: { ok: rec.ok || 0, fail: rec.fail || 0 } });
+      delete next.ok;
+      delete next.fail;
+      lineStats[id] = next;
+    } else if (!rec || typeof rec !== 'object' || !rec.all) {
+      delete lineStats[id];
+    }
+  });
+  LS.set(KEYS.lineStats, lineStats);
 
   const saveLines = () => { LS.set(KEYS.lines, lines); LS.set(KEYS.active, activeLineId); };
   const saveHistory = () => LS.set(KEYS.history, history);
@@ -108,6 +136,8 @@
     if (!snapshot || !snapshot.lines) return;
     snapshotTime = snapshot.checkedAt || null;
     Object.entries(snapshot.lines).forEach(([id, s]) => {
+      // 网关是分钟级实时体检,优先级高于每日快照;已合并网关数据的线路不再被快照覆盖
+      if (lineStatus[id] && lineStatus[id].source === 'gateway') return;
       lineStatus[id] = Object.assign({}, lineStatus[id], s, { source: 'tool' });
     });
     renderLines();
@@ -168,12 +198,83 @@
     const known = lines.filter(l => statusOf(l.id).status !== 'unknown');
     if (!known.length) { el.hidden = true; return; }
     const up = known.filter(l => statusOf(l.id).status === 'up').length;
-    const src = known.some(l => statusOf(l.id).source === 'tool')
-      ? '深度体检'
+    const src = known.some(l => statusOf(l.id).source === 'gateway') ? '本地网关'
+      : known.some(l => statusOf(l.id).source === 'tool') ? '深度体检'
       : '浏览器快测';
     const ago = snapshotTime ? '，约 ' + timeAgo(new Date(snapshotTime).getTime()) : '';
     el.hidden = false;
     el.innerHTML = '今晚 <span class="hi-count num">' + up + '/' + lines.length + '</span> 条线路通（' + src + ago + '）';
+  }
+
+  /* ---------- 本地网关(可选增强) ----------
+   * tools/gateway.py 起的本机服务:分钟级后台体检 + 播放前按需预检 + 失败回报。
+   * 页面每分钟探测一次网关,接入后线路状态自动换成网关视角(标记 source: gateway);
+   * 网关不在线时下面所有调用都静默失败,行为与没有网关时完全一致。
+   */
+  const GATEWAY = (window.GATEWAY && window.GATEWAY.enabled !== false && window.GATEWAY.base) || null;
+  let gatewayOn = false;
+  let gatewayBest = {};   // url -> { ts, cands } 网关预检结果缓存(90 秒内复用)
+
+  function gwFetch(path, opts) {
+    opts = opts || {};
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), opts.timeout || 3000);
+    return fetch(GATEWAY + path, Object.assign({ cache: 'no-store' }, opts, { signal: ctrl.signal }))
+      .finally(() => clearTimeout(timer));
+  }
+
+  function applyGatewayStatus(data) {
+    if (!data || !data.lines) return;
+    if (data.checkedAt) snapshotTime = data.checkedAt;
+    Object.entries(data.lines).forEach(([id, s]) => {
+      lineStatus[id] = Object.assign({}, lineStatus[id], s, { source: 'gateway' });
+    });
+    renderLines();
+    renderLineEditor();
+    renderStatusSummary();
+  }
+
+  function pingGateway() {
+    if (!GATEWAY) return;
+    gwFetch('/api/lines', { timeout: 1500 })
+      .then(r => r.json())
+      .then(data => { gatewayOn = true; applyGatewayStatus(data); })
+      .catch(() => { gatewayOn = false; });
+  }
+
+  function reportGateway(lineId, ok, platform) {
+    if (!GATEWAY || !gatewayOn || !lineId) return;
+    try {
+      fetch(GATEWAY + '/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({ lineId: lineId, ok: !!ok, platform: platform || '' })
+      }).catch(() => { /* 忽略 */ });
+    } catch (e) { /* 忽略 */ }
+  }
+
+  async function gatewayPreflight(url, line) {
+    // 只在首次播放(非自动换线链)时预检;结果无论如何都缓存,供 8 秒兜底择线
+    try {
+      const res = await gwFetch('/api/best?url=' + encodeURIComponent(url), { timeout: 13000 });
+      const data = await res.json();
+      const cands = (data && data.candidates) || [];
+      if (!cands.length) return;
+      gatewayBest[url] = { ts: Date.now(), cands: cands };
+      // 播放已成功、用户已换视频,或当前线探测并非明确失效 → 不打扰
+      if (frameLoaded && currentUrl === url) return;
+      if (currentUrl !== url) return;
+      const cur = cands.find(c => c.id === activeLineId);
+      if (cur && cur.status !== 'down') return;
+      const best = cands.find(c => c.status === 'up');
+      if (!best || best.id === activeLineId) return;
+      activeLineId = best.id;
+      saveLines();
+      renderLines();
+      toast('网关预检:「' + line.name + '」探测不通,已换到最快的「' + best.name + '」');
+      play(url, { skipHistory: true, tried: [line.id] });
+    } catch (e) { /* 网关不在或超时,静默 */ }
   }
 
   /* ---------- 平台识别 ---------- */
@@ -181,6 +282,11 @@
     let host;
     try { host = new URL(url).hostname.toLowerCase(); } catch (e) { return null; }
     return window.PLATFORMS.find(p => p.hosts.some(h => host === h || host.endsWith('.' + h)));
+  }
+
+  function platformOf(url) {
+    const p = url ? detectPlatform(url) : null;
+    return p ? p.name : null;
   }
 
   /* ---------- 链接处理 ---------- */
@@ -224,10 +330,16 @@
       btn.append(dot, document.createTextNode(line.name));
       const bits = [line.prefix + '{视频地址}', '状态：' + meta.label + (st.note ? '（' + st.note + '）' : '')];
       if (st.ms) bits.push('延迟：' + st.ms + 'ms');
-      const score = scoreOf(line.id);
-      if (score !== null) {
-        const rec = lineStats[line.id];
-        bits.push('本地成功率：' + Math.round(score * 100) + '%（' + rec.ok + '/' + (rec.ok + rec.fail) + '）');
+      const gRec = (lineStats[line.id] || {}).all;
+      if (gRec) {
+        bits.push('全局成功率：' + Math.round(((gRec.ok || 0) / Math.max(1, gRec.ok + gRec.fail)) * 100) + '%（' + gRec.ok + '/' + (gRec.ok + gRec.fail) + '）');
+      }
+      const platform = platformOf(currentUrl);
+      if (platform) {
+        const pRec = (lineStats[line.id] || {})[platform];
+        if (pRec && (pRec.ok + pRec.fail) >= 3) {
+          bits.push(platform + '成功率：' + Math.round((pRec.ok / (pRec.ok + pRec.fail)) * 100) + '%（' + pRec.ok + '/' + (pRec.ok + pRec.fail) + '）');
+        }
       }
       if (i < 9) bits.push('Alt+' + (i + 1));
       btn.title = bits.join('\n');
@@ -274,22 +386,37 @@
     return !!ts && (Date.now() - ts) < FAIL_MEMO_TTL;
   }
 
-  /* ---------- 线路质量统计（本地长期学习） ----------
+  /* ---------- 线路质量统计（本地长期学习，带平台维度） ----------
    * load 成功 / 超时 / 手动反馈都会累计；智能换线在体检可用的线路里优先选成功率高的。
+   * 平台维度：load 成功但黑屏/解析失败只有 👎 能捕捉——那才是「这条线配不配这个平台」的
+   * 关键信号；超时更多代表线路挂了，全局和平台各记一笔即可。
    */
-  function bumpStat(lineId, kind) {
+  function bumpStat(lineId, kind, platform) {
     if (!lineId) return;
-    const rec = lineStats[lineId] || { ok: 0, fail: 0 };
-    rec[kind]++;
+    const rec = lineStats[lineId] || { all: { ok: 0, fail: 0 } };
+    if (!rec.all) rec.all = { ok: 0, fail: 0 };
+    rec.all[kind]++;
+    if (platform) {
+      if (!rec[platform]) rec[platform] = { ok: 0, fail: 0 };
+      rec[platform][kind]++;
+    }
     lineStats[lineId] = rec;
     LS.set(KEYS.lineStats, lineStats);
   }
 
-  function scoreOf(lineId) {
+  function scoreOf(lineId, platform) {
     const rec = lineStats[lineId];
     if (!rec) return null;
-    const total = (rec.ok || 0) + (rec.fail || 0);
-    return total ? (rec.ok || 0) / total : null;
+    // 平台样本足够（>=3）时优先用平台维度，样本不足退回全局
+    if (platform && rec[platform]) {
+      const p = rec[platform];
+      const t = (p.ok || 0) + (p.fail || 0);
+      if (t >= 3) return (p.ok || 0) / t;
+    }
+    const all = rec.all;
+    if (!all) return null;
+    const total = (all.ok || 0) + (all.fail || 0);
+    return total ? (all.ok || 0) / total : null;
   }
 
   function pruneLineStats() {
@@ -300,17 +427,17 @@
     if (dirty) LS.set(KEYS.lineStats, lineStats);
   }
 
-  function nextHealthyLine(fromId, excludeIds, avoidDown) {
+  function nextHealthyLine(fromId, excludeIds, avoidDown, platform) {
     const exclude = excludeIds || [];
     const idx = lines.findIndex(l => l.id === fromId);
-    // 第一优先：体检可用、且近期没失败过的线路；多条命中时按本地成功率择优
+    // 第一优先：体检可用、且近期没失败过的线路；多条命中时按成功率择优（有平台维度且样本够就用平台成功率）
     const tier1 = [];
     for (let step = 1; step <= lines.length; step++) {
       const cand = lines[(idx + step) % lines.length];
       if (!exclude.includes(cand.id) && statusOf(cand.id).status === 'up' && !recentlyFailed(cand.id)) tier1.push(cand);
     }
     if (tier1.length) {
-      return tier1.sort((a, b) => (scoreOf(b.id) ?? -1) - (scoreOf(a.id) ?? -1))[0];
+      return tier1.sort((a, b) => (scoreOf(b.id, platform) ?? -1) - (scoreOf(a.id, platform) ?? -1))[0];
     }
     // 第二优先：可用但近期失败过的线路
     for (let step = 1; step <= lines.length; step++) {
@@ -334,7 +461,7 @@
 
   function switchLine() {
     if (lines.length < 2) { toast('只有一条线路，无法换线', 'error'); return; }
-    const target = nextHealthyLine(activeLineId, [activeLineId]);
+    const target = nextHealthyLine(activeLineId, [activeLineId], true, platformOf(currentUrl));
     if (!target || target.id === activeLineId) { toast('没有其他线路可换', 'error'); return; }
     activeLineId = target.id;
     saveLines();
@@ -464,6 +591,9 @@
       : buildParseUrl(line, url);
     playLineId = isM3u8 ? null : line.id;
 
+    // 网关在线时并行发起预检(不挡本次播放):当前线路若已死,几秒内自动换最快的线
+    if (GATEWAY && gatewayOn && !isM3u8 && !options.tried) gatewayPreflight(url, line);
+
     const section = $('#playerSection');
     const frame = $('#player');
     const loading = $('#playerLoading');
@@ -488,11 +618,20 @@
     play._t = setTimeout(() => {
       if (frameLoaded) return;
       markFail(line.id);
-      bumpStat(line.id, 'fail');
+      const plat = platformOf(url);
+      bumpStat(line.id, 'fail', plat);
+      reportGateway(line.id, false, plat);
       const tried = options.tried || [];
       // 自动换线：超时后自动换下一条，最多试 AUTO_SWITCH_MAX 次，全失败再回到手动引导
       if (autoSwitch && tried.length < AUTO_SWITCH_MAX) {
-        const target = nextHealthyLine(line.id, tried.concat(line.id), true);
+        // 网关在线时优先用它的预检结果(带着真实视频地址并发探测过的,比静态体检新鲜)
+        let target = null;
+        const cached = gatewayBest[url];
+        if (gatewayOn && cached && (Date.now() - cached.ts) < 90e3) {
+          const cand = cached.cands.find(c => c.status === 'up' && c.id !== line.id && !tried.includes(c.id));
+          if (cand) target = lines.find(l => l.id === cand.id) || null;
+        }
+        if (!target) target = nextHealthyLine(line.id, tried.concat(line.id), true, platformOf(url));
         if (target) {
           activeLineId = target.id;
           saveLines();
@@ -518,7 +657,10 @@
     // 只有真走了解析线路的播放才计入质量统计/解除失败记忆/回写历史
     if (playLineId && currentUrl) {
       clearFail(playLineId);   // 正常加载即摘掉失败记忆
-      bumpStat(playLineId, 'ok');
+      const plat = platformOf(currentUrl);
+      bumpStat(playLineId, 'ok', plat);
+      reportGateway(playLineId, true, plat);
+      renderLines();           // 成功率刚变了,立即刷新 chip 悬浮信息
       const rec = history.find(x => x.url === currentUrl);
       if (rec && rec.lineId !== playLineId) {   // 最后有响应的线路写回观看记录
         rec.lineId = playLineId;
@@ -621,7 +763,7 @@
         if (stored && stored.id !== activeLineId && storedSt !== 'down' && !recentlyFailed(stored.id)) {
           target = stored;                              // 上次的线路还健康 → 直接切回
         } else if (!stored || storedSt === 'down' || recentlyFailed(stored.id)) {
-          const cand = nextHealthyLine(activeLineId, [activeLineId], true);
+          const cand = nextHealthyLine(activeLineId, [activeLineId], true, platformOf(h.url));
           const candSt = cand ? statusOf(cand.id).status : 'down';
           const better = cand && candSt !== 'down' &&
             ((curSt === 'down' && candSt !== 'down') || (curSt !== 'up' && candSt === 'up'));
@@ -981,7 +1123,9 @@
     const line = lines.find(l => l.id === activeLineId);
     if (!line) return;
     markFail(line.id);
-    bumpStat(line.id, 'fail');
+    const plat = platformOf(currentUrl);
+    bumpStat(line.id, 'fail', plat);
+    reportGateway(line.id, false, plat);
     toast('已记住「' + line.name + '」这次不行');
     if (lines.length >= 2) switchLine();
   });
@@ -1060,6 +1204,88 @@
     }
   });
 
+  /* ---------- 广告拦截强制门 ----------
+   * 解析站的播放页会运行时动态注入广告/弹窗（bd.jx.cn 事件实测到成人广告插页），
+   * 本站要求浏览器必须有生效中的广告拦截才可使用：
+   *  - 达标路径：自家净化用户脚本（写入 vvpro.adShield 标记）/ AdGuard / uBlock Origin / Brave
+   *    等任何带化妆品过滤的拦截器；
+   *  - 探测手法：投放带常见广告类名的诱饵元素，被隐藏即达标（纯本地，零网络请求）；
+   *  - 仅 http(s) 线上站强制。file:// 下浏览器扩展默认不注入（需手动开「允许访问文件网址」），
+   *    强制会误伤正常用户，降级为顶部提醒 chip。
+   */
+  function detectBlocker() {
+    return new Promise(resolve => {
+      try {
+        const bait = document.createElement('div');
+        bait.className = 'ad-banner adsbox adsbygoogle textads banner-ads banner_ads ad-unit ad-zone pub_300x250 ad-slot';
+        bait.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:320px;height:50px;';
+        document.body.appendChild(bait);
+        setTimeout(() => {
+          const cs = getComputedStyle(bait);
+          const hidden = bait.offsetHeight === 0 ||
+            bait.getBoundingClientRect().height === 0 ||
+            cs.display === 'none' || cs.visibility === 'hidden';
+          bait.remove();
+          resolve(hidden);
+        }, 150);
+      } catch (e) { resolve(false); }
+    });
+  }
+
+  function showAdGuardGate() {
+    if ($('#adguardGate')) return;
+    const style = document.createElement('style');
+    style.textContent = [
+      '#adguardGate{position:fixed;inset:0;z-index:9999;background:rgba(8,11,15,.93);',
+      'backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px}',
+      '.vvgate-card{max-width:470px;background:#161c24;border:1px solid #2a323d;border-radius:16px;',
+      'padding:26px 28px;color:#d5dae2;box-shadow:0 18px 60px rgba(0,0,0,.5)}',
+      '.vvgate-card h2{margin:0 0 10px;font-size:18px;color:#eef1f6}',
+      '.vvgate-card p{margin:8px 0;font-size:13px;line-height:1.8;color:#9aa3b2}',
+      '.vvgate-card .hi{color:#e8b04b}',
+      '.vvgate-actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 6px}',
+      '.vvgate-btn{display:inline-flex;align-items:center;gap:6px;background:#2dd4bf;color:#0c1216;',
+      'border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none}',
+      '.vvgate-btn.ghost{background:transparent;color:#9aa3b2;border:1px solid #2a323d;font-weight:500}',
+      '.vvgate-msg{min-height:18px;margin-top:6px;font-size:12px;color:#f87171}',
+      '.vvgate-card a{color:#2dd4bf}'
+    ].join('');
+    document.head.appendChild(style);
+
+    const gate = document.createElement('div');
+    gate.id = 'adguardGate';
+    const installUrl = adguardInstallUrl();
+    gate.innerHTML =
+      '<div class="vvgate-card">' +
+      '<h2>🛡️ 本站需要开启广告拦截</h2>' +
+      '<p>解析站的播放页会<span class="hi">动态注入广告与弹窗</span>（本站曾实测到成人广告插页）。' +
+      '为保护使用安全，请先安装 <a href="' + installUrl + '" target="_blank" rel="noopener">AdGuard 扩展 ↗</a>' +
+      '（免费；uBlock Origin 等同类拦截器同样有效）。</p>' +
+      '<p>装好后回到本页点「重新检测」即可进入。检测原理：投放一个广告样式的诱饵元素，' +
+      '看它是否被拦截规则隐藏。</p>' +
+      '<div class="vvgate-actions">' +
+      '<a class="vvgate-btn" href="' + installUrl + '" target="_blank" rel="noopener">安装 AdGuard ↗</a>' +
+      '<button type="button" class="vvgate-btn ghost" id="vvgateRetry">我已装好 · 重新检测</button>' +
+      '<a class="vvgate-btn ghost" href="https://raw.githubusercontent.com/cloudy-one1/vip-video-parser-pro/main/userscript/parse-ad-shield.user.js" target="_blank" rel="noopener">备用：本站净化脚本</a>' +
+      '</div>' +
+      '<p class="vvgate-msg" id="vvgateMsg"></p>' +
+      '</div>';
+    document.body.appendChild(gate);
+    $('#vvgateRetry').addEventListener('click', async () => {
+      const msg = $('#vvgateMsg');
+      msg.style.color = '#9aa3b2';
+      msg.textContent = '重新检测中…';
+      if (await detectBlocker()) {
+        gate.remove();
+        style.remove();
+        toast('检测到广告拦截器，已解锁');
+      } else {
+        msg.style.color = '#f87171';
+        msg.textContent = '仍未检测到拦截：请确认扩展已启用，并允许在本站运行（扩展详情里检查「网站访问权限」）';
+      }
+    });
+  }
+
   /* ---------- 初始化 ---------- */
   $('#favFilter').checked = filterFav;
   pruneFailMemo();
@@ -1077,6 +1303,7 @@
   // 未装净化脚本且没关过提醒时，给出 AdGuard 安装引导
   // 链接按设备直达，避免误入桌面 App 下载页（那是付费软件，本站场景只需要免费扩展）：
   //   Edge → Edge 商店 ｜ Chrome → Chrome 商店 ｜ iPhone/iPad → App Store 的免费 Safari 拦截版 ｜ 其他 → 官方引导页
+  // 线上站(http)由强制门接管，提醒 chip 只服务 file:// 场景（扩展默认不注入文件页）
   const adguardInstallUrl = () => {
     const ua = navigator.userAgent;
     if (/iPhone|iPad|iPod/i.test(ua)) return 'https://apps.apple.com/app/id1047223162';
@@ -1088,7 +1315,7 @@
   const hintUrl = adguardInstallUrl();
   try {
     const KEYS_HAS = 'vvpro.adguardHintDismissed';
-    if (!shieldActive && !LS.get(KEYS_HAS, false)) {
+    if (!shieldActive && !LS.get(KEYS_HAS, false) && !location.protocol.startsWith('http')) {
       const hint = $('#adguardHint');
       hint.hidden = false;
       const a = hint.querySelector('a');
@@ -1111,12 +1338,23 @@
   renderHistory();
   renderStatusSummary();
   loadStatusSnapshot();
+  pingGateway();                    // 本地网关接入(不在时静默)
+  setInterval(pingGateway, 60e3);   // 网关晚于页面启动也能在 1 分钟内接上
 
-  // 支持 ?url=xxx 直接解析
-  const urlParam = new URLSearchParams(location.search).get('url');
-  if (urlParam) {
-    $('#urlInput').value = urlParam;
-    updateBadge();
-    play(urlParam);
-  }
+  // 广告拦截强制门：线上站(http)检测不到拦截器就上引导门，门开着时不自动播放；
+  // file:// 下扩展默认不注入，维持提醒 chip 的降级方案
+  (async () => {
+    const passed = shieldActive || await detectBlocker();
+    if (!passed && location.protocol.startsWith('http')) {
+      showAdGuardGate();
+      return;
+    }
+    // 支持 ?url=xxx 直接解析
+    const urlParam = new URLSearchParams(location.search).get('url');
+    if (urlParam) {
+      $('#urlInput').value = urlParam;
+      updateBadge();
+      play(urlParam);
+    }
+  })();
 })();

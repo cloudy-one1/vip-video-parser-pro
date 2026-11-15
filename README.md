@@ -21,12 +21,12 @@
 - **观看记录与收藏**:最近 50 条,记住上次线路、重播自动切回;支持搜索与「只看收藏」;云端播放显示「剧名 · 集名」。
 - **线路管理**:增删改、↑↓ 排序、一键恢复默认;`Alt+1~9` 快速切线,`?url=` 直连解析。
 
-## 增强防护(可选)
+## 增强防护
 
-解析页内部的广告需要浏览器级工具净化,按省事程度推荐:
+解析页内部的广告需要浏览器级工具净化。**线上站强制要求拦截器生效**:检测不到会显示引导门(file:// 本地打开不强制——浏览器扩展默认不注入文件页)。按省事程度推荐:
 
 1. **[AdGuard 官方浏览器扩展](https://microsoftedge.microsoft.com/addons/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl)**——首选,免费,一步到位;**注意别下成 AdGuard 桌面/手机 App(付费系统级软件,本站场景不需要)**。商店直达:[Edge](https://microsoftedge.microsoft.com/addons/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl) / [Chrome](https://chromewebstore.google.com/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl) / iPhone 装 [App Store 免费版 Safari 拦截](https://apps.apple.com/app/id1047223162);站内提醒会按设备自动跳对地方;
-2. **[净化用户脚本](userscript/parse-ad-shield.user.js)**——针对本仓库线路定制的微型过滤引擎,装 [Tampermonkey](https://www.tampermonkey.net/) 后[一键安装](https://raw.githubusercontent.com/cloudy-one1/vip-video-parser-pro/main/userscript/parse-ad-shield.user.js);
+2. **[净化用户脚本](userscript/parse-ad-shield.user.js)**——针对本仓库线路定制的微型过滤引擎,装 [Tampermonkey](https://www.tampermonkey.net/) 后[一键安装](https://raw.githubusercontent.com/cloudy-one1/vip-video-parser-pro/main/userscript/parse-ad-shield.user.js);装它即通过本站检测;
 3. **[MV3 扩展壳](extension/README.md)**——同一套规则的 `declarativeNetRequest` 网络层拦截版,本地加载。
 
 ## 开发
@@ -35,9 +35,10 @@
 # 在 VIP视频解析Pro/ 目录下执行,依赖 Python 3.10+ 与 scrapling[all]>=0.5
 python tools/line_checker.py --no-browser    # HTTP-only 体检(CI 同款口径)
 python tools/line_checker.py --history ..\.github\badges\history.json --trend-svg ..\.github\badges\trend.svg  # 累积健康趋势
+python tools/gateway.py                      # 本地线路网关(可选):分钟级体检+播放预检,http://127.0.0.1:8787/ 有仪表盘
 ```
 
-线路快照、徽标与趋势图由 `.github/workflows/line-check.yml` 每天北京时间 09:00 自动生成并提交回仓库;Pages 由 push 自动部署。
+线路快照、徽标与趋势图由 `.github/workflows/line-check.yml` 每天北京时间 09:00 自动生成并提交回仓库;Pages 由 push 自动部署。网关开着时页面自动接入(实时状态+免 8 秒盲等),关着也不影响使用。
 
 ## License
 
