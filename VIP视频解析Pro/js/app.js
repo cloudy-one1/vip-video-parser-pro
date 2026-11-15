@@ -607,6 +607,21 @@
       : platform ? platform.name + '，' : '') + url;
     nowPlaying.title = url;
 
+    // 来源徽标：云播放（自家播放器，稳定无广告）与解析线路（依赖解析站）明确区分
+    const badge = $('#playSourceBadge');
+    badge.hidden = false;
+    if (isM3u8) {
+      badge.className = 'play-source cloud';
+      badge.textContent = '云播放 · 自家播放器';
+    } else {
+      badge.className = 'play-source line';
+      badge.textContent = '线路播放 · ' + line.name;
+    }
+    // 换线 / 这条不行 / 自动换线只对解析线路有意义，云播放时藏掉
+    $('#switchLineBtn').hidden = isM3u8;
+    $('#badLineBtn').hidden = isM3u8;
+    $('#autoSwitchBtn').hidden = isM3u8;
+
     frame.src = parseUrl;
     $('#newTabBtn').dataset.href = parseUrl;
 
@@ -617,6 +632,11 @@
     clearTimeout(play._t);
     play._t = setTimeout(() => {
       if (frameLoaded) return;
+      if (!playLineId) {
+        // 自家播放器（云搜索/m3u8）与线路无关：不计失败、不换线，只给重试提示
+        $('#loadingMsg').textContent = '自家播放器加载超时，请点「刷新」重试';
+        return;
+      }
       markFail(line.id);
       const plat = platformOf(url);
       bumpStat(line.id, 'fail', plat);
@@ -646,7 +666,7 @@
     }, 8000);
 
     if (!options.skipHistory) addHistory(url, isM3u8 ? null : line, {
-      platform: isM3u8 ? 'm3u8直连' : undefined,
+      platform: isM3u8 ? '云播放' : undefined,
       title: options.title
     });
     section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -735,13 +755,14 @@
 
       const dot = document.createElement('span');
       dot.className = 'hi-dot';
-      dot.style.background = p ? p.color : '#8a8fa3';
+      // 云播放（没走解析线路）用主题色点，和各平台色点一眼区分
+      dot.style.background = !h.lineId ? 'var(--color-accent)' : (p ? p.color : '#8a8fa3');
 
       const info = document.createElement('span');
       info.className = 'hi-info';
       const plat = document.createElement('span');
-      plat.className = 'hi-platform';
-      plat.textContent = h.platform;
+      plat.className = 'hi-platform' + (!h.lineId ? ' cloud' : '');
+      plat.textContent = !h.lineId ? (h.platform === 'm3u8直连' ? '云播放' : h.platform) : h.platform;
       const urlSpan = document.createElement('span');
       urlSpan.className = 'hi-url' + (h.title ? ' has-title' : '');
       urlSpan.textContent = h.title || h.url;
@@ -872,10 +893,33 @@
     const cached = cloudCacheGet('search', kw);
     if (cached) return cached;
     const data = await cloudJson(CLOUD.SEARCH_API + encodeURIComponent(kw));
-    const list = (data.list || []).filter(x => x.id && x.name).slice(0, 12)
+    // 取 24 条留足排序余地：正主可能被蹭名短剧挤到 12 名开外，截断必须放在排序之后
+    const list = (data.list || []).filter(x => x.id && x.name).slice(0, 24)
       .map(x => ({ id: x.id, name: x.name, pic: x.pic || '' }));
     if (list.length) cloudCacheSet('search', kw, list);
     return list;
+  }
+
+  /* 正主前置：精确片名 > 正主+季/部/版本后缀 > 含片名 > 其他。
+   * 资源站的模糊搜索无相关性排序，「狂飙」之类查询会被同名蹭名短剧淹没，
+   * 正主经常掉出前 12 条——这里纯前端重排，不动 API。 */
+  function rankCloudResults(list, kw) {
+    const key = String(kw || '').replace(/\s+/g, '');
+    const seasonTail = /^(第.{1,3}[季部弹]|[上下]|[（(][上下][）)]|(特别|最终|完整|重映|加长|导演)版|番外|OVA|大电影|电影版|剧场版)+$/i;
+    const rank = name => {
+      const n = String(name).replace(/\s+/g, '');
+      if (n === key) return 0;
+      if (n.startsWith(key) && seasonTail.test(n.slice(key.length))) return 1;
+      if (n.includes(key)) return 2;
+      return 3;
+    };
+    return list
+      .map(x => {
+        const r = rank(x.name);
+        return Object.assign({}, x, { rank: r, main: r <= 1 });
+      })
+      .sort((a, b) => a.rank - b.rank)   // sort 稳定，同档内保持资源站原序
+      .slice(0, 12);
   }
 
   function parseEpisodes(playUrl) {
@@ -911,9 +955,9 @@
     $('#searchPanel').hidden = false;
     setCloudState({ view: 'loading', kw: kw, list: [], cand: null, candName: '', episodes: [], loading: true, error: '', retryKind: 'search' });
     try {
-      const list = await cloudSearch(kw);
-      if (cloudState.kw !== kw) return;   // 用户已改搜别的
-      setCloudState({ view: list.length ? 'candidates' : 'empty', list: list, loading: false });
+    const list = await cloudSearch(kw);
+    if (cloudState.kw !== kw) return;   // 用户已改搜别的
+    setCloudState({ view: list.length ? 'candidates' : 'empty', list: rankCloudResults(list, kw), loading: false });
     } catch (e) {
       if (cloudState.kw !== kw) return;
       setCloudState({ view: 'error', loading: false, error: '搜索服务暂时不可用（公共代理波动），可稍后重试，或直接粘贴链接走解析线路' });
@@ -992,13 +1036,13 @@
     }
 
     if (st.view === 'candidates') {
-      $('#searchPanelTitle').textContent = '「' + st.kw + '」的搜索结果';
+      $('#searchPanelTitle').textContent = '「' + st.kw + '」的搜索结果 · 无损云库';
       const grid = document.createElement('div');
       grid.className = 'cand-grid';
       st.list.forEach(cand => {
         const card = document.createElement('button');
         card.type = 'button';
-        card.className = 'cand-card';
+        card.className = 'cand-card' + (cand.main ? ' is-main' : '');
         const img = document.createElement('img');
         img.src = cand.pic;
         img.alt = cand.name;
@@ -1009,6 +1053,12 @@
         name.textContent = cand.name;
         name.title = cand.name;
         card.append(img, name);
+        if (cand.main) {
+          const tag = document.createElement('span');
+          tag.className = 'cand-tag';
+          tag.textContent = '正主';
+          card.appendChild(tag);
+        }
         card.addEventListener('click', () => openCloudDetail(cand));
         grid.appendChild(card);
       });
