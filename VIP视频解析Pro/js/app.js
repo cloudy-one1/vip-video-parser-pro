@@ -1452,6 +1452,11 @@
   renderLines();
   renderHistory();
   renderStatusSummary();
+  // 手机用法提示：移动端才显示（桌面用户从地址栏复制，无需说明）。
+  // iPadOS 13+ 的 Safari 报 Mac UA 但带多点触控，一并覆盖。
+  const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.userAgent));
+  if (isMobileUA) $('#mobileHow').hidden = false;
   loadStatusSnapshot();
   pingGateway();                    // 本地网关接入(不在时静默)
   setInterval(pingGateway, 60e3);   // 网关晚于页面启动也能在 1 分钟内接上

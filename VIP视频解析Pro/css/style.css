@@ -103,6 +103,13 @@ main { animation: settle var(--dur-long) var(--ease-out) both; }
 }
 .mode-tag.cloud { color: var(--color-accent); border-color: var(--color-accent); }
 
+/* 手机用法提示：移动端才显示（桌面用户地址栏复制无需说明） */
+.mobile-how {
+  margin-top: var(--space-xs);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
 #urlInput, #cloudInput {
   width: 100%;
   height: 44px;
