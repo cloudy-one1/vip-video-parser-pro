@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="480" height="64" viewBox="0 0 480 64">
 <line x1="8" y1="32" x2="472" y2="32" stroke="#d1d5db" stroke-width="1" stroke-dasharray="3,3"/>
-<polygon points="8.0,56 8.0,32.0 74.3,32.0 140.6,12.4 206.9,12.8 273.1,17.6 339.4,17.6 405.7,17.6 472.0,17.6 472.0,56" fill="#2dd4bf" opacity="0.15"/>
-<polyline points="8.0,32.0 74.3,32.0 140.6,12.4 206.9,12.8 273.1,17.6 339.4,17.6 405.7,17.6 472.0,17.6" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="8.0,56 8.0,32.0 66.0,32.0 124.0,12.4 182.0,12.8 240.0,17.6 298.0,17.6 356.0,17.6 414.0,17.6 472.0,17.6 472.0,56" fill="#2dd4bf" opacity="0.15"/>
+<polyline points="8.0,32.0 66.0,32.0 124.0,12.4 182.0,12.8 240.0,17.6 298.0,17.6 356.0,17.6 414.0,17.6 472.0,17.6" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 <circle cx="472.0" cy="17.6" r="3.5" fill="#2dd4bf"/>
 <text x="472" y="63" text-anchor="end" font-family="system-ui,sans-serif" font-size="11" fill="#6b7280">8/10</text>
 </svg>
