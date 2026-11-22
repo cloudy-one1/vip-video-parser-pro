@@ -39,7 +39,7 @@ python tools/gateway.py                      # 本地线路网关(可选):分钟
 
 # 在仓库根目录执行
 python -m unittest discover -s tests -v      # Python 单测(体检归类/文本解析)
-node --test tests/                           # 前端纯函数单测(需 Node 18+)
+node --test tests/core.test.js               # 前端纯函数单测(需 Node 18+)
 python tools/gen_dnr.py && python tools/gen_engine.py   # 改完净化规则后重新生成扩展产物
 ```
 
