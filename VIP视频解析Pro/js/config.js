@@ -14,17 +14,19 @@
  * 9 条候选经 line_checker 深度体检，FongMi 入选（七哥×2 为 Cloudflare 质询拦截、
  * 937/花旗/Ai超级/RdfPlayer 连接失败，均未入选；HLS解析同日入选又因上述告别页除名）。
  */
+/* up = 上游家族指纹（2026-11-15 家族指纹分析）：智能换线对同族降权，
+ * 避免「8090→789（同运营者）」这类换汤不换药的假重试。无 up 的线路按 id 独立成族。 */
 window.DEFAULT_LINES = [
-  { id: 'lxyy',       name: 'LXYY解析',  prefix: 'https://jx.lxyy.club/index.php?url=' },
-  { id: 'aibox',      name: 'AiBox解析', prefix: 'https://aibox.eu.org/?url=' },
-  { id: 'maccms',     name: 'MacCms解析', prefix: 'https://free.maccms.xyz/?url=' },
-  { id: 'im1907',     name: 'IM1907',    prefix: 'https://im1907.top/?jx=' },
-  { id: 'yemu',       name: '夜幕解析',   prefix: 'https://www.yemu.xyz/?url=' },
-  { id: '8090g',      name: '8090解析',  prefix: 'https://www.8090g.cn/?url=' },
-  { id: 'txnp',       name: 'TXNQ解析',  prefix: 'https://bfq.txnp.cn/player?url=' },
-  { id: 'jx789',      name: '789解析',   prefix: 'https://jiexi.789jiexi.com/?url=' },
-  { id: 'okjx',       name: 'OK解析',    prefix: 'https://okjx.cc/?url=' },
-  { id: 'fongmi',     name: 'FongMi',    prefix: 'https://json.fongmi.cc/web?url=' }
+  { id: 'lxyy',       name: 'LXYY解析',  prefix: 'https://jx.lxyy.club/index.php?url=',  up: 'lx' },
+  { id: 'aibox',      name: 'AiBox解析', prefix: 'https://aibox.eu.org/?url=',            up: 'aibox' },
+  { id: 'maccms',     name: 'MacCms解析', prefix: 'https://free.maccms.xyz/?url=',        up: 'qilin' },
+  { id: 'im1907',     name: 'IM1907',    prefix: 'https://im1907.top/?jx=',               up: 'nnpp' },
+  { id: 'yemu',       name: '夜幕解析',   prefix: 'https://www.yemu.xyz/?url=',           up: 'yemu' },
+  { id: '8090g',      name: '8090解析',  prefix: 'https://www.8090g.cn/?url=',            up: '8090' },
+  { id: 'txnp',       name: 'TXNQ解析',  prefix: 'https://bfq.txnp.cn/player?url=',       up: 'txnp' },
+  { id: 'jx789',      name: '789解析',   prefix: 'https://jiexi.789jiexi.com/?url=',      up: '8090' },
+  { id: 'okjx',       name: 'OK解析',    prefix: 'https://okjx.cc/?url=',                 up: 'okjx' },
+  { id: 'fongmi',     name: 'FongMi',    prefix: 'https://json.fongmi.cc/web?url=',       up: 'fongmi' }
 ];
 
 /* 已除名的默认线路（内容政策/服务关停）：app.js 会在加载时自动清掉「未被用户改动过」的这些线 */

@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '2.0.0';
+  var VERSION = '2.0.1';
 
   /* ---------- 站点联动：在我们自己的站点上只写激活标记 ---------- */
   if (location.hostname === 'cloudy-one1.github.io') {
@@ -55,8 +55,8 @@
     'aibox.eu.org,1ljx.com##[class*="banner" i]',
     'aibox.eu.org,1ljx.com##div[id$="_ad"]',
 
-    // —— yemu / bdjx：51.la 统计与推荐位(仅藏匿,不断流) ——
-    'yemu.xyz,bd.jx.cn##[class*="recommend-ad"]',
+    // —— yemu：51.la 统计与推荐位(仅藏匿,不断流) ——
+    'yemu.xyz##[class*="recommend-ad"]',
 
     // —— maccms：麒麟播放器常见悬浮推广位 ——
     'maccms.xyz##[id*="float"] [href*="promotion"]'

@@ -42,7 +42,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CONFIG_JS = ROOT / "js" / "config.js"
 OUT_DIR = ROOT / "js"
 
-TOOL_VERSION = "1.2"
+TOOL_VERSION = "1.3"
 
 # 疑似 Cloudflare 质询/拦截页的特征(小写匹配)
 CF_MARKERS = [
@@ -69,7 +69,7 @@ def parse_config_lines(config_path: Path):
     """从 config.js 里抠出 DEFAULT_LINES 条目(纯文本解析,不执行任何 JS)。"""
     text = config_path.read_text(encoding="utf-8")
     pattern = re.compile(
-        r"\{\s*id:\s*'([^']+)'\s*,\s*name:\s*'([^']+)'\s*,\s*prefix:\s*'([^']+)'\s*\}"
+        r"\{\s*id:\s*'([^']+)'\s*,\s*name:\s*'([^']+)'\s*,\s*prefix:\s*'([^']+)'[^}]*\}"
     )
     lines = [
         {"id": m.group(1), "name": m.group(2), "prefix": m.group(3)}
@@ -102,6 +102,41 @@ def page_text(resp) -> str:
         pass
     val = getattr(resp, "html_content", None)
     return val if isinstance(val, str) else ""
+
+
+FALLBACK_UA = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+
+
+def _extract_title(html: str) -> str:
+    """requests 兜底路径的 <title> 提取(不去依赖解析库)。"""
+    m = re.search(r"<title[^>]*>(.*?)</title>", html or "", re.I | re.S)
+    if not m:
+        return ""
+    title = re.sub(r"<[^>]+>", " ", m.group(1))
+    return title.replace("&nbsp;", " ").strip()
+
+
+def _visible_text(html: str) -> str:
+    """requests 兜底路径的可见文本近似:去 script/style、剥标签、压空白。"""
+    txt = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", html or "", flags=re.I | re.S)
+    txt = re.sub(r"<[^>]+>", " ", txt)
+    txt = txt.replace("&nbsp;", " ")
+    return re.sub(r"\s+", " ", txt).strip()
+
+
+def _requests_home(home: str, timeout: int):
+    """scrapling 缺席时的纯 requests 兜底(CI 轻量依赖路径,省掉浏览器全家桶)。"""
+    import requests
+
+    resp = requests.get(
+        home, timeout=timeout, allow_redirects=True,
+        headers={"User-Agent": FALLBACK_UA, "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.5"},
+    )
+    html = resp.text or ""
+    return int(resp.status_code), _extract_title(html), _visible_text(html), str(resp.url)
 
 
 def classify(code, title, text, final_url, home):
@@ -161,6 +196,12 @@ def probe(line, timeout, force_stealth=False, use_browser=True):
         title = (resp.css("title::text").get() or "").strip()
         text = page_text(resp)
         final_url = str(getattr(resp, "url", None) or home)
+    except ImportError:
+        # scrapling 未安装(CI 轻量路径):退化到 requests 兜底
+        try:
+            code, title, text, final_url = _requests_home(home, timeout)
+        except Exception as exc:
+            err = f"{type(exc).__name__}: {exc}"[:200]
     except Exception as exc:  # 网络/库异常都归为连接失败,不留裸堆栈
         err = f"{type(exc).__name__}: {exc}"[:200]
 
@@ -223,12 +264,19 @@ def badge_color(ratio: float) -> str:
 STATUS_MARK = {"up": "🟢 可用", "blocked": "🟡 被拦", "down": "🔴 失效"}
 
 
-def write_badge(path: Path, alive: int, total: int) -> None:
-    """写 shields.io endpoint 格式徽标 JSON(https://shields.io/badges/endpoint-badge)。"""
+def write_badge(path: Path, alive: int, total: int, date_str: str = "") -> None:
+    """写 shields.io endpoint 格式徽标 JSON(https://shields.io/badges/endpoint-badge)。
+
+    message 里带体检日期:静态 JSON 上的徽标不会自己过期,把日期写进文案,
+    体检停摆时徽标原地不动但日期一眼可见,配合看门狗工作流兜底。
+    """
+    message = f"{alive}/{total} 可用"
+    if date_str:
+        message += f" · {date_str}"
     badge = {
         "schemaVersion": 1,
         "label": "解析线路",
-        "message": f"{alive}/{total} 可用",
+        "message": message,
         "color": badge_color(alive / total if total else 0),
     }
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -387,7 +435,7 @@ def main():
         )
         print(f"历史已追加 {args.history}(共 {len(history)} 条)")
     if args.badge:
-        write_badge(Path(args.badge), alive, len(lines))
+        write_badge(Path(args.badge), alive, len(lines), snapshot["checkedAt"][5:10])
         print(f"徽标已写入 {args.badge}")
     if args.summary_md:
         write_summary_md(Path(args.summary_md), lines, results, alive, len(lines), history)

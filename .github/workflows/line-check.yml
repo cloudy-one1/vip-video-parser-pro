@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: line-check
@@ -24,8 +25,20 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 安装依赖
-        run: pip install "scrapling[all]>=0.5"
+      # 体检 HTTP-only 只需要 requests,不再拖 scrapling 浏览器全家桶(更快更稳)
+      - name: 安装依赖(轻量)
+        run: pip install requests
+
+      - name: 单元测试(体检归类 + 前端纯函数)
+        run: |
+          python -m unittest discover -s tests -v
+          node --test tests/
+
+      - name: 校验生成物与源头一致(防 userscript/extension 漂移)
+        run: |
+          python tools/gen_dnr.py
+          python tools/gen_engine.py
+          git diff --exit-code -- extension/ userscript/
 
       # 海外 runner 的 HTTP-only 体检(口径见 README「自动体检」一节)
       - name: 线路体检(HTTP-only)
@@ -50,4 +63,31 @@ jobs:
             exit 0
           fi
           git commit -m "chore(lines): 自动体检快照 $(date -u '+%F %H:%M UTC')"
+          git pull --rebase origin main
           git push
+
+      # 给监控装监控:job 失败自动开/评论 issue,恢复后自动关闭
+      - name: 失败告警(开/评论 issue)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="🚨 线路体检运行失败"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          NUM=$(gh issue list --state open --search "\"$TITLE\" in:title" --limit 1 --json number --jq '.[0].number // ""')
+          if [ -z "$NUM" ]; then
+            gh issue create --title "$TITLE" --body "最近一次失败:$RUN_URL"
+          else
+            gh issue comment "$NUM" --body "再次失败:$RUN_URL"
+          fi
+
+      - name: 成功后关闭失败告警
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="🚨 线路体检运行失败"
+          NUM=$(gh issue list --state open --search "\"$TITLE\" in:title" --limit 1 --json number --jq '.[0].number // ""')
+          if [ -n "$NUM" ]; then
+            gh issue close "$NUM" --comment "体检已恢复,自动关闭。"
+          fi

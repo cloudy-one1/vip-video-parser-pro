@@ -159,7 +159,13 @@ def origin_allowed(origin, extra):
     if origin == "null":
         return True                      # file:// 打开的页面
     low = origin.lower()
-    if low.startswith("http://localhost") or low.startswith("http://127.0.0.1"):
+    # 按 hostname 判断本机来源;不用 startswith 前缀匹配,防 http://localhost.evil.com 这类绕过
+    try:
+        p = urlparse(low)
+        host = (p.hostname or "").lower()
+    except ValueError:
+        return False
+    if p.scheme in ("http", "https") and host in ("localhost", "127.0.0.1", "::1"):
         return True
     if low == PAGES_ORIGIN or low.startswith(PAGES_ORIGIN + "/"):
         return True

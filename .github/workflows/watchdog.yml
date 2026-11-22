@@ -1,0 +1,75 @@
+name: 体检看门狗
+
+# 监控监控者:line-check 本身停摆(排程被关/依赖装不上/推送失败)时,
+# 徽标会原地不动且不会报错——这里独立检查快照新鲜度,超期就开 issue 报警。
+on:
+  schedule:
+    - cron: "30 2 * * *" # UTC 02:30 = 北京 10:30,晚于体检 90 分钟
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 检查最近体检是否新鲜(72h)
+        id: fresh
+        run: |
+          python - <<'PY'
+          import os, json, pathlib, datetime
+          now = datetime.datetime.now(datetime.timezone.utc)
+          ok, detail = False, ""
+          p = pathlib.Path(".github/badges/history.json")
+          try:
+              data = json.loads(p.read_text(encoding="utf-8"))
+              last = data[-1] if isinstance(data, list) and data else None
+              if last and last.get("checkedAt"):
+                  ts = datetime.datetime.fromisoformat(str(last["checkedAt"]))
+                  if ts.tzinfo is None:
+                      ts = ts.replace(tzinfo=datetime.timezone.utc)
+                  age = (now - ts).total_seconds() / 3600
+                  ok = age <= 72
+                  detail = "最近体检 %s(距今 %.0f 小时)" % (last["checkedAt"], age)
+              else:
+                  detail = "history.json 无有效记录"
+          except FileNotFoundError:
+              detail = "history.json 不存在"
+          except Exception as exc:
+              detail = "读取失败: %s" % exc
+          print(detail)
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write("ok=%s\n" % ("1" if ok else "0"))
+          PY
+
+      - name: 停摆则开/评论告警 issue
+        if: steps.fresh.outputs.ok != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="🚨 线路体检停摆(>72h 无快照)"
+          NUM=$(gh issue list --state open --search "\"$TITLE\" in:title" --limit 1 --json number --jq '.[0].number // ""')
+          if [ -z "$NUM" ]; then
+            gh issue create --title "$TITLE" --body "看门狗于 $(date -u '+%FT%TZ') 未在 .github/badges/history.json 找到 72 小时内的体检记录。请检查 line-check 工作流的运行状态。"
+          else
+            gh issue comment "$NUM" --body "仍在停摆:$(date -u '+%FT%TZ')"
+          fi
+
+      - name: 恢复则自动关闭告警
+        if: steps.fresh.outputs.ok == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NUM=$(gh issue list --state open --search "线路体检停摆 in:title" --limit 1 --json number --jq '.[0].number // ""')
+          if [ -n "$NUM" ]; then
+            gh issue close "$NUM" --comment "体检已恢复,自动关闭。"
+          fi

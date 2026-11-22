@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VIP视频解析 Pro · 解析页净化
 // @namespace    cloudy-one1/vip-video-parser-pro
-// @version      2.0.0
+// @version      2.0.1
 // @description  解析站净化引擎 v2：AdGuard 兼容语法的规则驱动微型 scriptlet 引擎。消弹窗、断属性、拒通知、藏广告位、断广告资源。机制经 REA 逆向 AdGuard 扩展引擎(tsurlfilter/agtree)蒸馏，代码为独立 MIT 实现。自动注入站内解析 iframe(含嵌套播放器域)。
 // @author       cloudy-one1
 // @match        *://*.lxyy.club/*
@@ -11,8 +11,6 @@
 // @match        *://*.im1907.top/*
 // @match        *://*.yemu.xyz/*
 // @match        *://*.8090g.cn/*
-// @match        *://*.aidouer.net/*
-// @match        *://*.bd.jx.cn/*
 // @match        *://*.txnp.cn/*
 // @match        *://*.789jiexi.com/*
 // @match        *://*.okjx.cc/*
@@ -42,7 +40,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '2.0.0';
+  var VERSION = '2.0.1';
 
   /* ---------- 站点联动：在我们自己的站点上只写激活标记 ---------- */
   if (location.hostname === 'cloudy-one1.github.io') {
@@ -74,8 +72,8 @@
     'aibox.eu.org,1ljx.com##[class*="banner" i]',
     'aibox.eu.org,1ljx.com##div[id$="_ad"]',
 
-    // —— yemu / bdjx：51.la 统计与推荐位(仅藏匿,不断流) ——
-    'yemu.xyz,bd.jx.cn##[class*="recommend-ad"]',
+    // —— yemu：51.la 统计与推荐位(仅藏匿,不断流) ——
+    'yemu.xyz##[class*="recommend-ad"]',
 
     // —— maccms：麒麟播放器常见悬浮推广位 ——
     'maccms.xyz##[id*="float"] [href*="promotion"]'

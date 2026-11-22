@@ -14,9 +14,10 @@ import json
 import os
 
 # 解析站与嵌套播放器域(initiator 限定)
+# 注:bd.jx.cn(内容政策)/aidouer.net(服务关停)已于 2026-11-14/15 除名,同步摘除
 INITIATOR_DOMAINS = [
     'lxyy.club', 'aibox.eu.org', '1ljx.com', 'maccms.xyz', 'im1907.top',
-    'yemu.xyz', '8090g.cn', 'aidouer.net', 'bd.jx.cn', 'txnp.cn',
+    'yemu.xyz', '8090g.cn', 'txnp.cn',
     '789jiexi.com', 'okjx.cc', 'wsyzy.vip'
 ]
 

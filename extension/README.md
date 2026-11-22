@@ -10,7 +10,7 @@
 | 行为层 | 9 个 scriptlet:消弹窗/断属性/防劫持/防刷新循环 | `content/engine.js` |
 | 视觉层 | 化妆品过滤 + 动态广告节点清扫 | 同上 |
 
-**精准防御原则**:全部规则的 `initiatorDomains` 限定为 11 条线路站 + 嵌套播放器域(`1ljx.com`) + 无损云播放器(`wsyzy.vip`)——**只在你解析视频时生效,日常上网零影响**;统计类脚本(51.la 等)刻意不拦;视频流绝不触碰。
+**精准防御原则**:全部规则的 `initiatorDomains` 限定为 10 条线路站 + 嵌套播放器域(`1ljx.com`) + 无损云播放器(`wsyzy.vip`)——**只在你解析视频时生效,日常上网零影响**;统计类脚本(51.la 等)刻意不拦;视频流绝不触碰。
 
 ## 安装(Chrome / Edge)
 
@@ -24,8 +24,8 @@
 
 ## 维护
 
-- **改广告域名/子串**:编辑 `tools/gen_dnr.py` 的 `LISTED_AD_DOMAINS` / `URL_FILTER_PATTERNS`,重跑 `python tools/gen_dnr.py`;
-- **改 scriptlet / 化妆品规则**:编辑 `userscript/parse-ad-shield.user.js`(单一事实源),重跑 `python tools/gen_engine.py` 同步到扩展;
+- **改广告域名/子串**:编辑**仓库根目录** `tools/gen_dnr.py` 的 `LISTED_AD_DOMAINS` / `URL_FILTER_PATTERNS`,重跑 `python tools/gen_dnr.py`;
+- **改 scriptlet / 化妆品规则**:编辑 `userscript/parse-ad-shield.user.js`(单一事实源),重跑**仓库根目录**的 `python tools/gen_engine.py` 同步到扩展(CI 的 line-check 会自动校验生成物未漂移);
 - 版本号在 `manifest.json` 与用户脚本头部,改动时同步。
 
 ## 为什么要扩展层

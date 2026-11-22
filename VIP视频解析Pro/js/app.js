@@ -4,6 +4,13 @@
 
   const $ = (sel) => document.querySelector(sel);
 
+  /* 纯函数核心库（js/lib/core.js，与 tests/core.test.js 单测同源） */
+  if (!window.VVPRO_CORE) throw new Error('js/lib/core.js 未加载');
+  const normalizeUrl = window.VVPRO_CORE.normalizeUrl;
+  const parseEpisodes = window.VVPRO_CORE.parseEpisodes;
+  const rankCloudResults = window.VVPRO_CORE.rankCloudResults;
+  const familyOf = window.VVPRO_CORE.familyOf;
+
   /* ---------- 本地存储 ---------- */
   const LS = {
     get(key, fallback) {
@@ -13,7 +20,18 @@
       } catch (e) { return fallback; }
     },
     set(key, val) {
-      try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { /* 隐私模式下忽略 */ }
+      try {
+        localStorage.setItem(key, JSON.stringify(val));
+      } catch (e) {
+        // 配额爆了：牺牲云搜索缓存再试一次。localStorage 配额按 origin 共享，
+        // 不处理的话缓存膨胀会连坐，把 lineStats/观看记录的持久化也一起静默拖死
+        if (key !== 'vvpro.cloudCache') {
+          try {
+            localStorage.removeItem('vvpro.cloudCache');
+            localStorage.setItem(key, JSON.stringify(val));
+          } catch (e2) { /* 隐私模式下放弃 */ }
+        }
+      }
     }
   };
 
@@ -71,6 +89,15 @@
     LS.set(KEYS.linesVer, LINES_VERSION);
     if (merged) LS.set(KEYS.lines, lines);
   }
+  // 老设备存档线路补上默认线的上游家族标记（换线同族降权用），幂等
+  let famPatched = false;
+  lines.forEach(l => {
+    if (!l.up) {
+      const d = window.DEFAULT_LINES.find(x => x.id === l.id || x.prefix === l.prefix);
+      if (d && d.up) { l.up = d.up; famPatched = true; }
+    }
+  });
+  if (famPatched) LS.set(KEYS.lines, lines);
   let activeLineId = LS.get(KEYS.active, null);
   if (!lines.some(l => l.id === activeLineId)) activeLineId = lines[0].id;
 
@@ -198,12 +225,17 @@
     const known = lines.filter(l => statusOf(l.id).status !== 'unknown');
     if (!known.length) { el.hidden = true; return; }
     const up = known.filter(l => statusOf(l.id).status === 'up').length;
-    const src = known.some(l => statusOf(l.id).source === 'gateway') ? '本地网关'
-      : known.some(l => statusOf(l.id).source === 'tool') ? '深度体检'
+    // 数据来源如实标注：混源时不再用 .some() 猜，明说「混合数据」
+    const srcs = new Set(known.map(l => statusOf(l.id).source));
+    const src = srcs.size > 1 ? '混合数据'
+      : srcs.has('gateway') ? '本地网关'
+      : srcs.has('tool') ? '深度体检'
       : '浏览器快测';
+    const hour = new Date().getHours();
+    const when = (hour >= 18 || hour < 5) ? '今晚' : '今天';
     const ago = snapshotTime ? '，约 ' + timeAgo(new Date(snapshotTime).getTime()) : '';
     el.hidden = false;
-    el.innerHTML = '今晚 <span class="hi-count num">' + up + '/' + lines.length + '</span> 条线路通（' + src + ago + '）';
+    el.innerHTML = when + ' <span class="hi-count num">' + up + '/' + lines.length + '</span> 条线路通（' + src + ago + '）';
   }
 
   /* ---------- 本地网关(可选增强) ----------
@@ -290,19 +322,7 @@
   }
 
   /* ---------- 链接处理 ---------- */
-  function normalizeUrl(raw) {
-    let url = (raw || '').trim();
-    if (!url) return null;
-    // 没写协议时，形如域名的自动补 https://
-    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) {
-      if (!/^[\w-]+(\.[\w-]+)+(:\d+)?(\/|\?|#|$)/i.test(url)) return null;
-      url = 'https://' + url;
-    }
-    try {
-      const u = new URL(url);
-      return /^https?:$/.test(u.protocol) ? u.href : null;
-    } catch (e) { return null; }
-  }
+  // normalizeUrl 已移至 js/lib/core.js（单测同源）
 
   function buildParseUrl(line, url) {
     if (line.prefix.includes('{url}')) {
@@ -330,15 +350,22 @@
       btn.append(dot, document.createTextNode(line.name));
       const bits = [line.prefix + '{视频地址}', '状态：' + meta.label + (st.note ? '（' + st.note + '）' : '')];
       if (st.ms) bits.push('延迟：' + st.ms + 'ms');
-      const gRec = (lineStats[line.id] || {}).all;
-      if (gRec) {
-        bits.push('全局成功率：' + Math.round(((gRec.ok || 0) / Math.max(1, gRec.ok + gRec.fail)) * 100) + '%（' + gRec.ok + '/' + (gRec.ok + gRec.fail) + '）');
-      }
+      // 口径如实命名：load 成功 =「加载成功率」，不是「能播出画面」；👎 黑屏反馈以 bad 单列计权
+      const fmtStat = (rec, label) => {
+        if (!rec) return null;
+        const bad = rec.bad || 0;
+        const total = (rec.ok || 0) + (rec.fail || 0) + bad;
+        if (!total) return null;
+        return label + Math.round(((rec.ok || 0) / total) * 100) + '%（' + (rec.ok || 0) + '/' + total + (bad ? '，含 👎×' + bad : '') + '）';
+      };
+      const gBit = fmtStat((lineStats[line.id] || {}).all, '加载成功率：');
+      if (gBit) bits.push(gBit);
       const platform = platformOf(currentUrl);
       if (platform) {
         const pRec = (lineStats[line.id] || {})[platform];
-        if (pRec && (pRec.ok + pRec.fail) >= 3) {
-          bits.push(platform + '成功率：' + Math.round((pRec.ok / (pRec.ok + pRec.fail)) * 100) + '%（' + pRec.ok + '/' + (pRec.ok + pRec.fail) + '）');
+        if (pRec && ((pRec.ok || 0) + (pRec.fail || 0) + (pRec.bad || 0)) >= 3) {
+          const pBit = fmtStat(pRec, platform + '成功率：');
+          if (pBit) bits.push(pBit);
         }
       }
       if (i < 9) bits.push('Alt+' + (i + 1));
@@ -391,14 +418,18 @@
    * 平台维度：load 成功但黑屏/解析失败只有 👎 能捕捉——那才是「这条线配不配这个平台」的
    * 关键信号；超时更多代表线路挂了，全局和平台各记一笔即可。
    */
-  function bumpStat(lineId, kind, platform) {
+  function bumpStat(lineId, kind, platform, opts) {
     if (!lineId) return;
+    // 👎 手动反馈（黑屏/画面有问题）是最有信息量的信号：一次顶两笔（fail + 独立 bad 惩罚计数）
+    const bad = !!(opts && opts.bad);
     const rec = lineStats[lineId] || { all: { ok: 0, fail: 0 } };
     if (!rec.all) rec.all = { ok: 0, fail: 0 };
     rec.all[kind]++;
+    if (bad) rec.all.bad = (rec.all.bad || 0) + 1;
     if (platform) {
       if (!rec[platform]) rec[platform] = { ok: 0, fail: 0 };
       rec[platform][kind]++;
+      if (bad) rec[platform].bad = (rec[platform].bad || 0) + 1;
     }
     lineStats[lineId] = rec;
     LS.set(KEYS.lineStats, lineStats);
@@ -407,16 +438,20 @@
   function scoreOf(lineId, platform) {
     const rec = lineStats[lineId];
     if (!rec) return null;
-    // 平台样本足够（>=3）时优先用平台维度，样本不足退回全局
+    // 加载成功率口径：ok / (ok + fail + bad)，👎 每次额外记一笔惩罚
+    const calc = (d) => {
+      if (!d) return null;
+      const bad = d.bad || 0;
+      const total = (d.ok || 0) + (d.fail || 0) + bad;
+      return total ? (d.ok || 0) / total : null;
+    };
+    // 平台样本足够（>=3，bad 计入样本）时优先用平台维度，样本不足退回全局
     if (platform && rec[platform]) {
       const p = rec[platform];
-      const t = (p.ok || 0) + (p.fail || 0);
-      if (t >= 3) return (p.ok || 0) / t;
+      const t = (p.ok || 0) + (p.fail || 0) + (p.bad || 0);
+      if (t >= 3) return calc(p);
     }
-    const all = rec.all;
-    if (!all) return null;
-    const total = (all.ok || 0) + (all.fail || 0);
-    return total ? (all.ok || 0) / total : null;
+    return calc(rec.all);
   }
 
   function pruneLineStats() {
@@ -428,35 +463,12 @@
   }
 
   function nextHealthyLine(fromId, excludeIds, avoidDown, platform) {
-    const exclude = excludeIds || [];
-    const idx = lines.findIndex(l => l.id === fromId);
-    // 第一优先：体检可用、且近期没失败过的线路；多条命中时按成功率择优（有平台维度且样本够就用平台成功率）
-    const tier1 = [];
-    for (let step = 1; step <= lines.length; step++) {
-      const cand = lines[(idx + step) % lines.length];
-      if (!exclude.includes(cand.id) && statusOf(cand.id).status === 'up' && !recentlyFailed(cand.id)) tier1.push(cand);
-    }
-    if (tier1.length) {
-      return tier1.sort((a, b) => (scoreOf(b.id, platform) ?? -1) - (scoreOf(a.id, platform) ?? -1))[0];
-    }
-    // 第二优先：可用但近期失败过的线路
-    for (let step = 1; step <= lines.length; step++) {
-      const cand = lines[(idx + step) % lines.length];
-      if (!exclude.includes(cand.id) && statusOf(cand.id).status === 'up') return cand;
-    }
-    // 第三优先：非失效线路（自动换线/重播兜底用，避免撞上已知失效的线）
-    if (avoidDown) {
-      for (let step = 1; step <= lines.length; step++) {
-        const cand = lines[(idx + step) % lines.length];
-        if (!exclude.includes(cand.id) && statusOf(cand.id).status !== 'down') return cand;
-      }
-    }
-    // 兜底：顺序换下一条没试过的
-    for (let step = 1; step <= lines.length; step++) {
-      const cand = lines[(idx + step) % lines.length];
-      if (!exclude.includes(cand.id)) return cand;
-    }
-    return null; // 全部被排除（自动换线把所有线路都试完时）
+    // 分层择线 + 同上游家族降权的纯逻辑在 js/lib/core.js（单测同源），这里只注入本地状态
+    return window.VVPRO_CORE.nextHealthyLine(lines, fromId, excludeIds, avoidDown, platform, {
+      statusOf: statusOf,
+      recentlyFailed: recentlyFailed,
+      scoreOf: scoreOf
+    });
   }
 
   function switchLine() {
@@ -648,7 +660,13 @@
         let target = null;
         const cached = gatewayBest[url];
         if (gatewayOn && cached && (Date.now() - cached.ts) < 90e3) {
-          const cand = cached.cands.find(c => c.status === 'up' && c.id !== line.id && !tried.includes(c.id));
+          const cands = cached.cands.filter(c => c.status === 'up' && c.id !== line.id && !tried.includes(c.id));
+          // 同上游家族降权：当前线挂了,它的同族大概率也挂,优先换真不同的上游
+          const fam = familyOf(line);
+          const cand = cands.find(c => {
+            const l = lines.find(x => x.id === c.id);
+            return l && familyOf(l) !== fam;
+          }) || cands[0];
           if (cand) target = lines.find(l => l.id === cand.id) || null;
         }
         if (!target) target = nextHealthyLine(line.id, tried.concat(line.id), true, platformOf(url));
@@ -860,7 +878,15 @@
   }
 
   function cloudCacheSet(kind, key, val) {
-    cloudCache[kind][key] = { t: Date.now(), v: val };
+    const box = cloudCache[kind];
+    box[key] = { t: Date.now(), v: val };
+    // 写入时淘汰最旧的条目，防 localStorage 被 cms 源顺手种下的剧集表撑爆
+    const CAP = 80;
+    const keys = Object.keys(box);
+    if (keys.length > CAP) {
+      keys.sort((a, b) => (box[a].t || 0) - (box[b].t || 0));
+      keys.slice(0, keys.length - CAP).forEach(k => delete box[k]);
+    }
     LS.set(KEYS.cloudCache, cloudCache);
   }
 
@@ -928,46 +954,7 @@
     return list;
   }
 
-  /* 正主前置：精确片名 > 正主+季/部/版本后缀 > 含片名 > 其他。
-   * 资源站的模糊搜索无相关性排序，「狂飙」之类查询会被同名蹭名短剧淹没，
-   * 正主经常掉出前 12 条——这里纯前端重排，不动 API。 */
-  function rankCloudResults(list, kw) {
-    const key = String(kw || '').replace(/\s+/g, '');
-    const seasonTail = /^(第.{1,3}[季部弹]|[上下]|[（(][上下][）)]|(特别|最终|完整|重映|加长|导演)版|番外|OVA|大电影|电影版|剧场版)+$/i;
-    const rank = name => {
-      const n = String(name).replace(/\s+/g, '');
-      if (n === key) return 0;
-      if (n.startsWith(key) && seasonTail.test(n.slice(key.length))) return 1;
-      if (n.includes(key)) return 2;
-      return 3;
-    };
-    return list
-      .map(x => {
-        const r = rank(x.name);
-        return Object.assign({}, x, { rank: r, main: r <= 1 });
-      })
-      .sort((a, b) => a.rank - b.rank)   // sort 稳定，同档内保持资源站原序
-      .slice(0, 12);
-  }
-
-  function parseEpisodes(playUrl) {
-    // 苹果CMS 格式：多播放组以 $$$ 分隔（同源常带 share页组 + m3u8 直链组两组），
-    // 组内 第1集$url1#第2集$url2…。自家播放器只吃 m3u8 直链，
-    // 所以优先选 m3u8 直链最多的组；都不含时退回集数最多的组。
-    let best = null;
-    String(playUrl || '').split('$$$').forEach(g => {
-      const eps = g.split('#').map(seg => {
-        const p = seg.split('$');
-        return { name: (p[0] || '').trim() || '播放', url: (p[1] || p[0] || '').trim() };
-      }).filter(ep => /^https?:\/\//i.test(ep.url));
-      if (!eps.length) return;
-      const m3u8n = eps.filter(ep => /\.m3u8([?#]|$)/i.test(ep.url)).length;
-      if (!best || m3u8n > best.m3u8n || (m3u8n === best.m3u8n && eps.length > best.eps.length)) {
-        best = { m3u8n: m3u8n, eps: eps };
-      }
-    });
-    return best ? best.eps : [];
-  }
+  /* rankCloudResults / parseEpisodes 已移至 js/lib/core.js（单测同源） */
 
   /* 候选唯一键：多源下 id 可能撞号（各家 vod_id 独立体系），加源前缀 */
   function candKey(cand) {
@@ -1194,6 +1181,9 @@
       if (!$('#linePanel').hidden) $('#linePanel').hidden = true;
     }
     if (e.altKey && /^[1-9]$/.test(e.key)) {
+      // 输入框里打字/组合输入时不抢按键
+      const tag = e.target && e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
       const line = lines[+e.key - 1];
       if (line) { selectLine(line.id); e.preventDefault(); }
     }
@@ -1240,7 +1230,8 @@
     if (!line) return;
     markFail(line.id);
     const plat = platformOf(currentUrl);
-    bumpStat(line.id, 'fail', plat);
+    // 👎 是黑屏/画面问题的直接信号，双倍计权（fail + bad 惩罚），让择线更快绕开适配差的线路
+    bumpStat(line.id, 'fail', plat, { bad: true });
     reportGateway(line.id, false, plat);
     toast('已记住「' + line.name + '」这次不行');
     if (lines.length >= 2) switchLine();
@@ -1422,11 +1413,18 @@
   const adguardInstallUrl = () => {
     const ua = navigator.userAgent;
     if (/iPhone|iPad|iPod/i.test(ua)) return 'https://apps.apple.com/app/id1047223162';
+    // Android 桌面 Chrome 商店链接是死路（Android Chrome 装不了扩展），统一直达安卓版
+    if (/Android/i.test(ua)) return 'https://adguard.com/zh_cn/adguard-android.html';
     if (/Edg\//.test(ua)) return 'https://microsoftedge.microsoft.com/addons/detail/adguard-%E5%B9%BF%E5%91%8A%E6%8B%A6%E6%88%AA%E5%99%A8/pdffkfellgipmhklpdmokmckkkfcopbh';
-    if (/Chrome\//.test(ua) && !/Edg\//.test(ua)) return 'https://chromewebstore.google.com/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl';
+    if (/Chrome\//.test(ua)) return 'https://chromewebstore.google.com/detail/adguard-adblocker/adhmjkgkdmnfpadddhnibmmlpghcndhl';
     return 'https://adguard.com/zh_cn/adguard-browser-extension/extension.html';
   };
   const isIosDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  // Android 上只有 Firefox 系能装过滤扩展；Chrome/Samsung/Edge 等装不了，
+  // 强制门只会给出打不开的商店链接（死锁）——这类浏览器降级为提醒 chip，不锁页面
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const isAndroidExtCapable = isAndroid && /Firefox|FxiOS/i.test(navigator.userAgent);
+  const isAndroidNoExt = isAndroid && !isAndroidExtCapable;
   const hintUrl = adguardInstallUrl();
   try {
     const KEYS_HAS = 'vvpro.adguardHintDismissed';
@@ -1462,19 +1460,29 @@
   setInterval(pingGateway, 60e3);   // 网关晚于页面启动也能在 1 分钟内接上
 
   // 广告拦截强制门：线上站(http)检测不到拦截器就上引导门，门开着时不自动播放；
-  // file:// 下扩展默认不注入，维持提醒 chip 的降级方案
+  // file:// 与 Android 无扩展浏览器（装不了扩展，门是死路）降级为提醒 chip
   (async () => {
     const passed = shieldActive || await detectBlocker();
-    if (!passed && location.protocol.startsWith('http')) {
+    const isHttp = location.protocol.startsWith('http');
+    let gated = false;
+    if (!passed && isHttp && !isAndroidNoExt) {
       showAdGuardGate();
-      return;
+      gated = true;
+    } else if (!passed && isHttp && isAndroidNoExt && !LS.get('vvpro.adguardHintDismissed', false)) {
+      // Android 死路浏览器：给出可执行的出路（换 Brave/Firefox 或装安卓版），不锁页面
+      const hint = $('#adguardHint');
+      hint.hidden = false;
+      const a = hint.querySelector('a');
+      a.href = adguardInstallUrl();
+      a.textContent = '增强防护：用 Brave / Firefox 打开更稳，或装 AdGuard 安卓版 ↗';
     }
-    // 支持 ?url=xxx 直接解析
+    // ?url= 深链：先把链接填进输入框（门开着也不丢），能播才自动播
     const urlParam = new URLSearchParams(location.search).get('url');
     if (urlParam) {
       $('#urlInput').value = urlParam;
       updateBadge();
-      play(urlParam);
+      if (!gated) play(urlParam);
+      else toast('链接已填入，处理完拦截引导后点「解析播放」');
     }
   })();
 })();
