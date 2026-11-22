@@ -32,10 +32,16 @@
   function parseEpisodes(playUrl) {
     let best = null;
     String(playUrl || '').split('$$$').forEach(g => {
-      const eps = g.split('#').map(seg => {
+      const eps = [];
+      g.split('#').forEach(seg => {
         const p = seg.split('$');
-        return { name: (p[0] || '').trim() || '播放', url: (p[1] || p[0] || '').trim() };
-      }).filter(ep => /^https?:\/\//i.test(ep.url));
+        const url = (p[1] || p[0] || '').trim();
+        if (!/^https?:\/\//i.test(url)) return;
+        // 有「集名$url」形态才用集名;裸链接不再拿 URL 当按钮文字,按组内序号命名
+        let name = (p.length > 1 && p[0]) ? p[0].trim() : '';
+        if (!name) name = '第' + (eps.length + 1) + '集';
+        eps.push({ name: name, url: url });
+      });
       if (!eps.length) return;
       const m3u8n = eps.filter(ep => /\.m3u8([?#]|$)/i.test(ep.url)).length;
       if (!best || m3u8n > best.m3u8n || (m3u8n === best.m3u8n && eps.length > best.eps.length)) {

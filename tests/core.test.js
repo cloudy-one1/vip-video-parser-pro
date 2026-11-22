@@ -42,10 +42,17 @@ test('parseEpisodes: m3u8 数相同取集数多的组', () => {
   assert.strictEqual(eps.length, 2);
   assert.strictEqual(eps[0].url, 'https://b/1.m3u8');
 });
-test('parseEpisodes: 裸链接(无 $ 分隔)当作单集', () => {
+test('parseEpisodes: 裸链接(无 $ 分隔)按序号命名,不拿 URL 当按钮文字', () => {
   const eps = core.parseEpisodes('https://x/v.m3u8');
   assert.strictEqual(eps.length, 1);
   assert.strictEqual(eps[0].url, 'https://x/v.m3u8');
+  assert.strictEqual(eps[0].name, '第1集');
+});
+test('parseEpisodes: 混合形态下缺名条目按位置命名', () => {
+  const eps = core.parseEpisodes('第1集$https://x/1.m3u8#https://x/2.m3u8');
+  assert.strictEqual(eps.length, 2);
+  assert.strictEqual(eps[0].name, '第1集');
+  assert.strictEqual(eps[1].name, '第2集');
 });
 test('parseEpisodes: 过滤非 http 项', () => {
   const eps = core.parseEpisodes('第1集$/vod/1.m3u8#第2集$https://x/2.m3u8');

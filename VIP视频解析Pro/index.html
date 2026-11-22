@@ -26,18 +26,8 @@
 
   <main class="container">
 
-    <!-- 解析入口 -->
+    <!-- 搜索入口：云播为主路径，线路解析降级为可选插件（默认折叠） -->
     <section class="card search-card">
-      <div class="input-row">
-        <span class="mode-tag" title="贴官方播放页链接，走解析线路">解析</span>
-        <div class="input-wrap" id="inputWrap">
-          <input type="text" id="urlInput" placeholder="粘贴视频链接（腾讯 / 爱奇艺 / 优酷…）" autocomplete="off" spellcheck="false">
-          <span id="platformBadge" class="platform-badge" hidden></span>
-        </div>
-        <button id="playBtn" class="btn primary" type="button" title="把链接交给当前解析线路播放">解析播放</button>
-        <button id="pasteBtn" class="btn ghost" type="button" title="从剪贴板粘贴">粘贴</button>
-        <button id="clearBtn" class="btn ghost" type="button" title="清空输入框 (Esc)">清空</button>
-      </div>
       <div class="input-row cloud-row">
         <span class="mode-tag cloud" title="搜片名，从无损云资源库直接播放">云播</span>
         <div class="input-wrap">
@@ -45,7 +35,7 @@
         </div>
         <button id="cloudSearchBtn" class="btn primary" type="button" title="从无损云资源库搜索并播放；新上线的爆款可能搜不到">云播放</button>
       </div>
-      <p id="mobileHow" class="mobile-how" hidden>手机上拿链接：在视频 App 或网页里点「分享 → 复制链接」，回到这里点「粘贴」即可；多数时候直接搜片名走云播放更省事。</p>
+      <p id="mobileHow" class="mobile-how" hidden>手机上拿链接：在视频 App 或网页里点「分享 → 复制链接」，展开「线路解析」后点「粘贴」即可；多数时候直接搜片名走云播放更省事。</p>
 
       <!-- 无损云搜索面板：片名 → 候选 → 选集 → 直连播放 -->
       <div id="searchPanel" class="search-panel" hidden>
@@ -56,31 +46,49 @@
         <div id="searchPanelBody" class="search-panel-body"></div>
       </div>
 
-      <div class="lines-row">
-        <span class="lines-label">线路</span>
-        <div id="lineList" class="line-list" role="group" aria-label="解析线路"></div>
-        <button id="checkBtn" class="btn ghost small" type="button" title="在浏览器里快速探测各线路站点可达性（粗粒度）">体检</button>
-        <button id="manageBtn" class="btn ghost small" type="button">管理线路</button>
-        <span id="shieldBadge" class="shield-badge" hidden title="解析页净化脚本（Tampermonkey 伴生组件）已激活：消弹窗、拒通知、断广告、藏广告位">净化已启用</span>
-        <span id="adguardHint" class="adguard-hint" hidden>
-          <a href="https://adguard.com/zh_cn/adguard-browser-extension/extension.html" target="_blank" rel="noopener noreferrer" title="跳转 AdGuard 官方安装引导，自动识别浏览器与平台（含手机版）">增强防护：推荐装 AdGuard ↗</a>
-          <button id="adguardHintClose" type="button" title="不再提示">✕</button>
-        </span>
+      <div class="parse-toggle-row">
+        <button id="parseModeBtn" class="btn ghost small" type="button" title="展开/收起解析线路区（贴平台播放页链接观看用）">▸ 线路解析（可选）</button>
       </div>
 
-      <!-- 线路管理面板 -->
-      <div id="linePanel" class="line-panel" hidden>
-        <div class="line-panel-head">
-          <h2>线路管理</h2>
-          <button id="resetLinesBtn" class="btn ghost small" type="button">恢复默认线路</button>
+      <!-- 线路解析区（可选插件）：默认折叠，播放平台链接或回放线路历史时自动展开 -->
+      <div id="parseSection" hidden>
+        <div class="input-row">
+          <span class="mode-tag" title="贴官方播放页链接，走解析线路">解析</span>
+          <div class="input-wrap" id="inputWrap">
+            <input type="text" id="urlInput" placeholder="粘贴视频链接（腾讯 / 爱奇艺 / 优酷…）" autocomplete="off" spellcheck="false">
+            <span id="platformBadge" class="platform-badge" hidden></span>
+          </div>
+          <button id="playBtn" class="btn primary" type="button" title="把链接交给当前解析线路播放">解析播放</button>
+          <button id="pasteBtn" class="btn ghost" type="button" title="从剪贴板粘贴">粘贴</button>
+          <button id="clearBtn" class="btn ghost" type="button" title="清空输入框 (Esc)">清空</button>
         </div>
-        <ul id="lineEditorList" class="line-editor-list"></ul>
-        <form id="addLineForm" class="add-line-form" autocomplete="off">
-          <input type="text" id="newLineName" placeholder="线路名称，如：我的线路" required>
-          <input type="text" id="newLinePrefix" placeholder="接口地址，如 https://xxx.com/?url=（可用 {url} 占位）" required>
-          <button type="submit" class="btn primary small">添加</button>
-        </form>
-        <p class="line-panel-tip">说明：接口地址里的 <code>{url}</code> 表示视频链接的位置，不写则自动拼在末尾。默认线路来自原版 v1.0.2 及常见公开解析站，仅作示例。</p>
+
+        <div class="lines-row">
+          <span class="lines-label">线路</span>
+          <div id="lineList" class="line-list" role="group" aria-label="解析线路"></div>
+          <button id="checkBtn" class="btn ghost small" type="button" title="在浏览器里快速探测各线路站点可达性（粗粒度）">体检</button>
+          <button id="manageBtn" class="btn ghost small" type="button">管理线路</button>
+          <span id="shieldBadge" class="shield-badge" hidden title="解析页净化脚本（Tampermonkey 伴生组件）已激活：消弹窗、拒通知、断广告、藏广告位">净化已启用</span>
+          <span id="adguardHint" class="adguard-hint" hidden>
+            <a href="https://adguard.com/zh_cn/adguard-browser-extension/extension.html" target="_blank" rel="noopener noreferrer" title="跳转 AdGuard 官方安装引导，自动识别浏览器与平台（含手机版）">增强防护：推荐装 AdGuard ↗</a>
+            <button id="adguardHintClose" type="button" title="不再提示">✕</button>
+          </span>
+        </div>
+
+        <!-- 线路管理面板 -->
+        <div id="linePanel" class="line-panel" hidden>
+          <div class="line-panel-head">
+            <h2>线路管理</h2>
+            <button id="resetLinesBtn" class="btn ghost small" type="button">恢复默认线路</button>
+          </div>
+          <ul id="lineEditorList" class="line-editor-list"></ul>
+          <form id="addLineForm" class="add-line-form" autocomplete="off">
+            <input type="text" id="newLineName" placeholder="线路名称，如：我的线路" required>
+            <input type="text" id="newLinePrefix" placeholder="接口地址，如 https://xxx.com/?url=（可用 {url} 占位）" required>
+            <button type="submit" class="btn primary small">添加</button>
+          </form>
+          <p class="line-panel-tip">说明：接口地址里的 <code>{url}</code> 表示视频链接的位置，不写则自动拼在末尾。默认线路来自原版 v1.0.2 及常见公开解析站，仅作示例。</p>
+        </div>
       </div>
     </section>
 
@@ -108,7 +116,7 @@
           <button id="loadingSwitchBtn" class="btn primary small" type="button" hidden>换一条线路试试</button>
         </div>
       </div>
-      <p class="player-tip">沙箱开着，解析页里的弹窗和下载进不来。画面不行就点「这条不行」，它记仇 30 分钟，换线时自动绕开；任何「下载 / 允许通知 / 充值」字样都不是本站功能，请勿理会。想釜底抽薪？装个 <a class="tip-link" href="https://adguard.com/zh_cn/adguard-browser-extension/extension.html" target="_blank" rel="noopener noreferrer">AdGuard 扩展</a>，广告在到达页面之前就被掐断（电脑一步、手机装 AdGuard App）。</p>
+      <p class="player-tip">沙箱开着，解析页里的弹窗和下载进不来；云播放更彻底——自家播放器跑在零特权的独立源里，连本页数据都摸不到。画面不行就点「这条不行」，它记仇 30 分钟，换线时自动绕开；任何「下载 / 允许通知 / 充值」字样都不是本站功能，请勿理会。想釜底抽薪？装个 <a class="tip-link" href="https://adguard.com/zh_cn/adguard-browser-extension/extension.html" target="_blank" rel="noopener noreferrer">AdGuard 扩展</a>，广告在到达页面之前就被掐断（电脑一步、手机装 AdGuard App）。</p>
     </section>
 
     <!-- 观看记录 -->

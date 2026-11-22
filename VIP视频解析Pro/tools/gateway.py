@@ -6,8 +6,9 @@
 
   - 后台定期体检 js/config.js 里的默认线路(复用 line_checker 的探测与归类)
   - GET  /api/lines   最新体检快照(前端启动后自动拉取,合并进线路状态)
-  - GET  /api/best    播放前按需预检:带真实视频地址并发探测全部线路,
-                      返回「最快可用」的候选排序,前端免去 8 秒盲等
+  - GET  /api/probe   播放前按需探测【当前一条】线路(隐私设计:视频地址只发给
+                      即将播放它的那个站点,不广播给全部线路)
+  - GET  /api/best    全线路并发探测(仅限网关仪表盘手动测试框使用;前端不再调用)
   - POST /api/report  前端回报播放成功/失败,网关汇总成短期失败记忆
   - GET  /            仪表盘:线路状态表 + 预检测试框
 
@@ -233,6 +234,22 @@ class Handler(BaseHTTPRequestHandler):
                 payload = {"gateway": GATEWAY_VERSION, "checkedAt": STATE["checkedAt"],
                            "lines": dict(STATE["lines"]), "reports": dict(REPORTS)}
             self._send_json(payload)
+        elif u.path == "/api/probe":
+            if self._reject_origin():
+                return
+            video_url = (q.get("url") or [""])[0].strip()
+            line_id = (q.get("line") or [""])[0].strip()
+            if not video_url.startswith(("http://", "https://")):
+                self._send_json({"ok": False, "error": "缺少合法的 url 参数"}, 400)
+                return
+            line_def = next((l for l in line_checker.parse_config_lines(CONFIG_JS)
+                             if l["id"] == line_id), None)
+            if not line_def:
+                self._send_json({"ok": False, "error": "未知线路 id"}, 400)
+                return
+            # 隐私边界:单线探测——视频地址只出现在用户自己选中的那条线路的请求里
+            rec = probe_parse(line_def, video_url, self.probe_timeout)
+            self._send_json({"gateway": GATEWAY_VERSION, "line": rec})
         elif u.path == "/api/best":
             if self._reject_origin():
                 return

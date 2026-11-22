@@ -45,7 +45,8 @@
     failMemo: 'vvpro.failMemo',
     cloudCache: 'vvpro.cloudCache',
     proxyIdx: 'vvpro.proxyIdx',
-    lineStats: 'vvpro.lineStats'
+    lineStats: 'vvpro.lineStats',
+    parseMode: 'vvpro.parseModeOn'
   };
 
   const AUTO_SWITCH_MAX = 3;        // 加载超时后最多自动换线次数
@@ -241,11 +242,11 @@
   /* ---------- 本地网关(可选增强) ----------
    * tools/gateway.py 起的本机服务:分钟级后台体检 + 播放前按需预检 + 失败回报。
    * 页面每分钟探测一次网关,接入后线路状态自动换成网关视角(标记 source: gateway);
-   * 网关不在线时下面所有调用都静默失败,行为与没有网关时完全一致。
+   * 播放前只对【当前线路】做单线预检——视频地址只发给即将播放它的站点,
+   * 不再广播给全部线路。网关不在线时下面所有调用都静默失败,行为与没有网关时完全一致。
    */
   const GATEWAY = (window.GATEWAY && window.GATEWAY.enabled !== false && window.GATEWAY.base) || null;
   let gatewayOn = false;
-  let gatewayBest = {};   // url -> { ts, cands } 网关预检结果缓存(90 秒内复用)
 
   function gwFetch(path, opts) {
     opts = opts || {};
@@ -287,24 +288,22 @@
   }
 
   async function gatewayPreflight(url, line) {
-    // 只在首次播放(非自动换线链)时预检;结果无论如何都缓存,供 8 秒兜底择线
+    // 只在首次播放(非自动换线链)时预检,且只探测当前这一条线路:
+    // 视频地址不广播给其它站点。当前线明确挂了才用静态择线预切(8 秒盲等由兜底机制负责)。
     try {
-      const res = await gwFetch('/api/best?url=' + encodeURIComponent(url), { timeout: 13000 });
+      const res = await gwFetch('/api/probe?url=' + encodeURIComponent(url) +
+        '&line=' + encodeURIComponent(line.id), { timeout: 13000 });
       const data = await res.json();
-      const cands = (data && data.candidates) || [];
-      if (!cands.length) return;
-      gatewayBest[url] = { ts: Date.now(), cands: cands };
-      // 播放已成功、用户已换视频,或当前线探测并非明确失效 → 不打扰
-      if (frameLoaded && currentUrl === url) return;
-      if (currentUrl !== url) return;
-      const cur = cands.find(c => c.id === activeLineId);
-      if (cur && cur.status !== 'down') return;
-      const best = cands.find(c => c.status === 'up');
-      if (!best || best.id === activeLineId) return;
-      activeLineId = best.id;
+      const rec = data && data.line;
+      if (!rec || rec.status !== 'down') return;   // 活着/被拦/未知 → 不打扰
+      if (frameLoaded && currentUrl === url) return;   // 已加载成功,别折腾
+      if (currentUrl !== url) return;                  // 用户已换视频
+      const target = nextHealthyLine(line.id, [line.id], true, platformOf(url));
+      if (!target || target.id === activeLineId) return;
+      activeLineId = target.id;
       saveLines();
       renderLines();
-      toast('网关预检:「' + line.name + '」探测不通,已换到最快的「' + best.name + '」');
+      toast('网关预检:「' + line.name + '」探测不通,已预切到「' + target.name + '」');
       play(url, { skipHistory: true, tried: [line.id] });
     } catch (e) { /* 网关不在或超时,静默 */ }
   }
@@ -519,6 +518,10 @@
         if (prefix && !/^https?:\/\//i.test(prefix)) {
           toast('接口地址需以 http(s):// 开头', 'error');
           prefixI.value = line.prefix;
+        } else if (prefix && prefixPointsAtSelf(prefix)) {
+          // 指向本站自身的接口地址会让同源文档进 allow-same-origin 沙箱,构成逃逸路径
+          toast('接口地址不能指向本站自身', 'error');
+          prefixI.value = line.prefix;
         } else if (prefix) {
           line.prefix = prefix;
         }
@@ -573,10 +576,28 @@
     });
   }
 
+  /* ---------- 线路解析折叠(可选插件) ----------
+   * 云播放(无损云库 + 自家播放器)是主路径;依赖第三方解析站的线路子系统
+   * 时效性差、广告面不可控,降级为可选增强:默认折叠,开关状态持久化。
+   * 粘贴平台链接播放或回放带线路的历史时会自动展开。
+   */
+  let parseModeOn = LS.get(KEYS.parseMode, false);
+  function renderParseMode() {
+    $('#parseSection').hidden = !parseModeOn;
+    const btn = $('#parseModeBtn');
+    btn.textContent = parseModeOn ? '▾ 线路解析' : '▸ 线路解析（可选）';
+    btn.classList.toggle('on', parseModeOn);
+  }
+  function setParseMode(on) {
+    parseModeOn = !!on;
+    LS.set(KEYS.parseMode, parseModeOn);
+    renderParseMode();
+    if (parseModeOn) renderLines();
+  }
+
   /* ---------- 播放 ---------- */
   let frameLoaded = false;   // 区分「load 事件正常触发」与「8 秒兜底超时」
   let playLineId = null;     // 本次播放真正走了解析线路时才有值(m3u8 直连/自家播放器为 null)
-
   function hideLoading() {
     clearTimeout(play._t);
     $('#playerLoading').classList.add('gone');
@@ -598,6 +619,8 @@
     currentUrl = url;
     // m3u8 直连：粘贴 .m3u8 链接直接用自家播放器播放，不走解析线路
     const isM3u8 = /^https?:\/\/[^\s"'<>]+\.m3u8([?#]|$)/i.test(url);
+    // 真要走解析线路时自动展开(默认折叠的)线路解析区
+    if (!isM3u8 && !parseModeOn) setParseMode(true);
     const parseUrl = (isM3u8 && window.CLOUD)
       ? window.CLOUD.PLAYER + encodeURIComponent(url)
       : buildParseUrl(line, url);
@@ -634,6 +657,12 @@
     $('#badLineBtn').hidden = isM3u8;
     $('#autoSwitchBtn').hidden = isM3u8;
 
+    // 沙箱按来源分级:自家播放器(player.html,同源)去掉 allow-same-origin,跑在不透明源里——
+    // 即使恶意视频流触发 hls.js/播放器漏洞,也摸不到父页 DOM 与 localStorage(沙箱无法自解);
+    // 解析站(跨域)维持 allow-same-origin,保其自身 cookie/存储可用,行为不变
+    let sameOriginDoc = true;
+    try { sameOriginDoc = new URL(parseUrl, location.href).origin === location.origin; } catch (e) {}
+    frame.sandbox = sameOriginDoc ? 'allow-scripts' : 'allow-scripts allow-same-origin';
     frame.src = parseUrl;
     $('#newTabBtn').dataset.href = parseUrl;
 
@@ -656,20 +685,9 @@
       const tried = options.tried || [];
       // 自动换线：超时后自动换下一条，最多试 AUTO_SWITCH_MAX 次，全失败再回到手动引导
       if (autoSwitch && tried.length < AUTO_SWITCH_MAX) {
-        // 网关在线时优先用它的预检结果(带着真实视频地址并发探测过的,比静态体检新鲜)
-        let target = null;
-        const cached = gatewayBest[url];
-        if (gatewayOn && cached && (Date.now() - cached.ts) < 90e3) {
-          const cands = cached.cands.filter(c => c.status === 'up' && c.id !== line.id && !tried.includes(c.id));
-          // 同上游家族降权：当前线挂了,它的同族大概率也挂,优先换真不同的上游
-          const fam = familyOf(line);
-          const cand = cands.find(c => {
-            const l = lines.find(x => x.id === c.id);
-            return l && familyOf(l) !== fam;
-          }) || cands[0];
-          if (cand) target = lines.find(l => l.id === cand.id) || null;
-        }
-        if (!target) target = nextHealthyLine(line.id, tried.concat(line.id), true, platformOf(url));
+        // 网关后台 sweep 的分钟级状态已合并进 lineStatus,nextHealthyLine(含同族降权)直接择优,
+        // 不再对其它线路做带真实地址的并发探测
+        const target = nextHealthyLine(line.id, tried.concat(line.id), true, platformOf(url));
         if (target) {
           activeLineId = target.id;
           saveLines();
@@ -1181,7 +1199,8 @@
       if (!$('#linePanel').hidden) $('#linePanel').hidden = true;
     }
     if (e.altKey && /^[1-9]$/.test(e.key)) {
-      // 输入框里打字/组合输入时不抢按键
+      // 线路解析折叠时不抢按键;输入框里打字/组合输入时也不抢
+      if (!parseModeOn) return;
       const tag = e.target && e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
       const line = lines[+e.key - 1];
@@ -1206,6 +1225,8 @@
       toast('无法读取剪贴板，请手动粘贴', 'error');
     }
   });
+
+  $('#parseModeBtn').addEventListener('click', () => setParseMode(!parseModeOn));
 
   $('#manageBtn').addEventListener('click', () => {
     const panel = $('#linePanel');
@@ -1258,6 +1279,11 @@
     toast('已恢复默认线路');
   });
 
+  // 接口地址是否指向本站自身(相对地址同样视作指向本站)——用于堵同源沙箱逃逸
+  function prefixPointsAtSelf(prefix) {
+    try { return new URL(prefix, location.href).origin === location.origin; } catch (e) { return false; }
+  }
+
   $('#addLineForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const name = $('#newLineName').value.trim();
@@ -1265,6 +1291,10 @@
     if (!name || !prefix) return;
     if (!/^https?:\/\//i.test(prefix)) {
       toast('接口地址需以 http(s):// 开头', 'error');
+      return;
+    }
+    if (prefixPointsAtSelf(prefix)) {
+      toast('接口地址不能指向本站自身', 'error');
       return;
     }
     lines.push({ id: 'custom-' + Date.now(), name: name, prefix: prefix });
@@ -1282,6 +1312,18 @@
 
   $('#searchPanelClose').addEventListener('click', () => {
     $('#searchPanel').hidden = true;
+  });
+
+  // player.html 在不透明源里请求回退官方播放器(wsyzy.vip):由宿主页代为把沙箱
+  // 升回 allow-same-origin 再导航——wsyzy 是跨域站,拿到的只是它自己的源,碰不到本页
+  window.addEventListener('message', (e) => {
+    const d = e.data;
+    if (!d || typeof d !== 'object' || !d.vvproRemoteFallback) return;
+    const src = String(d.vvproRemoteFallback);
+    if (!/^https?:\/\//i.test(src) || src.length > 2000) return;
+    const frame = $('#player');
+    frame.sandbox = 'allow-scripts allow-same-origin';
+    frame.src = 'https://wsyzy.vip/m3u8/?url=' + encodeURIComponent(src);
   });
 
   $('#newTabBtn').addEventListener('click', () => {
@@ -1398,6 +1440,7 @@
   pruneCloudCache();
   pruneLineStats();
   renderAutoSwitch();
+  renderParseMode();
   // 解析页净化用户脚本（伴生组件）激活检测：脚本会在本站写入标记
   const shieldActive = (() => {
     try {

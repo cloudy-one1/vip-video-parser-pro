@@ -718,6 +718,13 @@ kbd {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ========= 线路解析折叠开关(可选插件) ========= */
+/* 云播是主入口,解析线路区整体折叠;hidden + 块级容器显式兜底(作者样式不吃 UA 的 [hidden]) */
+.parse-toggle-row { display: flex; margin-top: var(--space-sm); }
+#parseModeBtn { cursor: pointer; user-select: none; }
+#parseModeBtn.on { border-color: var(--color-accent); color: var(--color-accent); }
+#parseSection[hidden] { display: none; }
+
 /* ========= 窄屏 ========= */
 @media (max-width: 40rem) {
   .input-row .btn { flex: 1; }

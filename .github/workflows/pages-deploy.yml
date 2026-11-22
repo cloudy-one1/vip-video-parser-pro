@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: 站点瘦身(工具脚本与设计笔记不发布到线上)
+        run: rm -rf "VIP视频解析Pro/tools" "VIP视频解析Pro/.hallmark"
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:

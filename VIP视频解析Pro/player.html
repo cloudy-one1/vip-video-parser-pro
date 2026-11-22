@@ -61,7 +61,7 @@
     </div>
   </div>
 
-  <!-- hls.js(Apache-2.0)本地化,避免任何 CDN 依赖 -->
+  <!-- hls.js v1.7.4(Apache-2.0)light 版本地化,避免任何 CDN 依赖 -->
   <script src="js/vendor/hls.light.min.js"></script>
   <script>
     (function () {
@@ -125,8 +125,18 @@
 
       retryBtn.addEventListener('click', function () { started = false; start(); });
       remoteBtn.addEventListener('click', function () {
-        // 回退到无损云官方播放器(仍在沙箱 iframe 内,不会离开本站)
-        location.replace('https://wsyzy.vip/m3u8/?url=' + encodeURIComponent(src));
+        // 回退到无损云官方播放器。本页可能被宿主沙箱成不透明源(无 allow-same-origin,
+        // 自身 localStorage 不可用)——此时不自行导航,postMessage 请宿主页代为
+        // 升级沙箱级别再导航;独立打开(无宿主)时才直接 replace。
+        var fallbackUrl = 'https://wsyzy.vip/m3u8/?url=' + encodeURIComponent(src);
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ vvproRemoteFallback: src }, '*');
+            setMsg('正在切换到官方播放器…', false);
+            return;
+          }
+        } catch (e) { /* 落回直接导航 */ }
+        location.replace(fallbackUrl);
       });
 
       start();
